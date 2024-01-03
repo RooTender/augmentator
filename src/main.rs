@@ -5,7 +5,7 @@ fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>>
 {
     let mut full_paths: Vec<PathBuf> = vec![];
 
-    for file in path.read_dir()?.filter_map(|e| e.ok())
+    path.read_dir()?.filter_map(|e| e.ok()).for_each(|file|
     {
         let filename = file.file_name().to_string_lossy().into_owned();
         if let Some(extension) = filename.split('.').last()
@@ -15,7 +15,7 @@ fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>>
                 full_paths.push(file.path().canonicalize().unwrap());
             }
         }
-    }
+    });
 
     Ok(full_paths)
 }
@@ -25,7 +25,6 @@ fn main()
     let paths = get_image_paths(Path::new("src/test"))
         .expect("Failed to collect image paths");
 
-    println!("{}", paths.len());
     for path in paths {
         println!("{}", path.display());
     }
