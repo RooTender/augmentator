@@ -22,5 +22,11 @@ fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>>
 
 fn main()
 {
+    let paths = get_image_paths(Path::new("src/test"))
+        .expect("Failed to collect image paths");
 
+    println!("{}", paths.len());
+    for path in paths {
+        println!("{}", path.display());
+    }
 }
