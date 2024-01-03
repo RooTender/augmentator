@@ -1,3 +1,4 @@
+use std::io;
 use std::path::{Path, PathBuf};
 use std::error::Error;
 
@@ -22,8 +23,12 @@ fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>>
 
 fn main()
 {
-    let paths = get_image_paths(Path::new("src/test"))
-        .expect("Failed to collect image paths");
+    println!("Please enter the directory containing the images: ");
+    let mut buffer = String::new();
+    let _ = io::stdin().read_line(&mut buffer);
+
+    let paths = get_image_paths(Path::new(buffer.trim()))
+        .expect("Failed to gather image paths");
 
     for path in paths {
         println!("{}", path.display());
