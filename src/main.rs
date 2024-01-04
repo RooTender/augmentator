@@ -2,7 +2,7 @@ use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, image
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
 use std::error::Error;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 enum ShiftAxis {
@@ -38,16 +38,26 @@ where
         ShiftAxis::Horizontal => {
             for y in 0..height {
                 let row: Vec<P> = (0..width).map(|x| img.get_pixel(x, y).clone()).collect();
-                for (x, pixel) in row.into_iter().cycle().skip((width - shift_pixels) as usize).take(width as usize).enumerate() {
-                    temp_img.put_pixel(x as u32, y, pixel);
+                for (x, pixel) in row
+                    .into_iter()
+                    .cycle()
+                    .skip((width - shift_pixels) as usize)
+                    .take(width as usize)
+                    .enumerate() {
+                        temp_img.put_pixel(x as u32, y, pixel);
                 }
             }
         },
         ShiftAxis::Vertical => {
             for x in 0..width {
                 let col: Vec<P> = (0..height).map(|y| img.get_pixel(x, y).clone()).collect();
-                for (y, pixel) in col.into_iter().cycle().skip((height - shift_pixels) as usize).take(height as usize).enumerate() {
-                    temp_img.put_pixel(x, y as u32, pixel);
+                for (y, pixel) in col
+                    .into_iter()
+                    .cycle()
+                    .skip((height - shift_pixels) as usize)
+                    .take(height as usize)
+                    .enumerate() {
+                        temp_img.put_pixel(x, y as u32, pixel);
                 }
             }
         }
@@ -57,7 +67,8 @@ where
 }
 
 fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
-    let img = image::open(image_path)?;
+    let img = image::open(image_path)
+        .expect("Cannot open image from given location");
     let mut rng = StdRng::seed_from_u64(seed);
 
     let transformations = vec![
@@ -72,8 +83,12 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
     let ops: Vec<Box<dyn Fn(&mut DynamicImage, &mut StdRng)>> = vec![
         Box::new(|_: &mut DynamicImage, _: &mut StdRng| {}),
         Box::new(|img: &mut DynamicImage, _: &mut StdRng| img.invert()),
-        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { img.brighten(rng.gen_range(-255..255)); }),
-        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { img.adjust_contrast(rng.gen_range(-1.0..1.0)); }),
+        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { 
+            img.brighten(rng.gen_range(-255..255)); 
+        }),
+        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { 
+            img.adjust_contrast(rng.gen_range(-1.0..1.0)); 
+        }),
     ];
 
     fn apply_shift_and_hue_rotate(img: &DynamicImage, rng: &mut StdRng) -> DynamicImage {
@@ -93,26 +108,42 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
             op(&mut transformed_img, &mut rng);
 
             let save_path = save_location.join(format!("augmented_{}_{}.png", i, j));
-            transformed_img.save(&save_path)?;
+            transformed_img.save(&save_path)
+                .expect("Cannot save the augmented image");
         }
     }
 
     Ok(())
 }
 
-fn main() {
-    println!("Please enter the seed for deterministic random generation: ");
-    let mut buffer = String::new();
-    let _ = io::stdin().read_line(&mut buffer);
-    let seed: u64 = buffer.trim().parse().expect("Please type a number!");
+fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
+    let samples = get_image_paths(samples_path)?;
 
-    println!("Please enter the directory containing the images: ");
-    let mut buffer = String::new();
-    let _ = io::stdin().read_line(&mut buffer);
-
-    let paths = get_image_paths(Path::new(buffer.trim())).expect("Failed to gather image paths");
-
-    for path in paths {
-        augment_image(path.as_path(), Path::new("."), seed).expect("Failed to augment the image");
+    for image_path in samples {
+        augment_image(image_path.as_path(), output_path, seed)
+            .expect("An error occurred during image augmentation");
     }
+
+    Ok(())
+}
+
+fn read_input(prompt: &str) -> String {
+    print!("{}: ", prompt);
+    io::stdout().flush().unwrap();
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).expect("Failed to read input");
+
+    buffer.trim().to_string()
+}
+
+fn main() {
+    let seed: u64 = read_input("Seed for deterministic RNG")
+        .parse()
+        .expect("Please type a number!");
+
+    let input = read_input("Please enter the directory containing the images");
+    let output: String = read_input("Please enter the directory where to save files");
+
+    augment_dataset(Path::new(&input), Path::new(&output), seed)
+        .expect("Failed to augment dataset");
 }
