@@ -84,7 +84,16 @@ fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn 
         let transformed_img = transform(&shifted_img);
 
         let save_path = save_location.join(format!("augmented_{}.png", i));
-        transformed_img.save(save_path)?;
+        transformed_img.save(&save_path)?;
+    }
+
+    for (i, transform) in transformations.iter().enumerate() {
+        let shifted_img = shift(&img);
+        let mut transformed_img = transform(&shifted_img);
+        colorops::invert(&mut transformed_img);
+
+        let save_path = save_location.join(format!("inv_augmented_{}.png", i));
+        transformed_img.save(&save_path)?;
     }
 
     Ok(())
