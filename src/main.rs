@@ -141,8 +141,8 @@ fn main() {
         .parse()
         .expect("Please type a number!");
 
-    let input = read_input("Please enter the directory containing the images");
-    let output: String = read_input("Please enter the directory where to save files");
+    let input = read_input("Directory with images");
+    let output: String = read_input("Directory to save results");
 
     augment_dataset(Path::new(&input), Path::new(&output), seed)
         .expect("Failed to augment dataset");
