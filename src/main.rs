@@ -2,8 +2,9 @@ use clap::{Command, Arg};
 use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, imageops::colorops};
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::error::Error;
-use std::{fs, thread};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -129,23 +130,14 @@ fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result
     }
 
     let output_path = Arc::new(output_path.to_path_buf());
-    let mut handles = Vec::new();
 
-    for image_path in samples {
+    samples.par_iter().for_each(|image_path| {
         let destination_dir = Arc::clone(&output_path);
         let seed = seed;
 
-        let handle = thread::spawn(move || {
-            augment_image(image_path.as_path(), destination_dir.as_path(), seed)
-                .expect("An error occurred during image augmentation");
-        });
-
-        handles.push(handle);
-    }
-
-    for handle in handles {
-        handle.join().expect("Thread failed");
-    }
+        augment_image(image_path.as_path(), destination_dir.as_path(), seed)
+            .expect("An error occurred during image augmentation");
+    });
 
     Ok(())
 }
