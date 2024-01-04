@@ -1,5 +1,6 @@
 use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, imageops::colorops};
-use rand::prelude::*;
+use rand::{Rng,SeedableRng};
+use rand::rngs::StdRng;
 use std::error::Error;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -55,9 +56,9 @@ where
     temp_img
 }
 
-fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn Error>> {
+fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
     let img = image::open(image_path)?;
-    let mut rng = thread_rng();
+    let mut rng = StdRng::seed_from_u64(seed);
 
     let transformations = vec![
         |img: &DynamicImage| img.clone(),
@@ -68,14 +69,14 @@ fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn 
         |img: &DynamicImage| img.fliph(),
     ];
 
-    let ops: Vec<Box<dyn Fn(&mut DynamicImage, &mut ThreadRng)>> = vec![
-        Box::new(|_: &mut DynamicImage, _: &mut ThreadRng| {}),
-        Box::new(|img: &mut DynamicImage, _: &mut ThreadRng| img.invert()),
-        Box::new(|img: &mut DynamicImage, rng: &mut ThreadRng| { img.brighten(rng.gen_range(-255..255)); }),
-        Box::new(|img: &mut DynamicImage, rng: &mut ThreadRng| { img.adjust_contrast(rng.gen_range(-1.0..1.0)); }),
+    let ops: Vec<Box<dyn Fn(&mut DynamicImage, &mut StdRng)>> = vec![
+        Box::new(|_: &mut DynamicImage, _: &mut StdRng| {}),
+        Box::new(|img: &mut DynamicImage, _: &mut StdRng| img.invert()),
+        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { img.brighten(rng.gen_range(-255..255)); }),
+        Box::new(|img: &mut DynamicImage, rng: &mut StdRng| { img.adjust_contrast(rng.gen_range(-1.0..1.0)); }),
     ];
 
-    fn apply_shift_and_hue_rotate(img: &DynamicImage, rng: &mut ThreadRng) -> DynamicImage {
+    fn apply_shift_and_hue_rotate(img: &DynamicImage, rng: &mut StdRng) -> DynamicImage {
         let shift_pixels_v = rng.gen_range(1..img.height());
         let shift_pixels_h = rng.gen_range(1..img.width());
         let hue_angle = rng.gen_range(1..360);
@@ -107,6 +108,6 @@ fn main() {
     let paths = get_image_paths(Path::new(buffer.trim())).expect("Failed to gather image paths");
 
     for path in paths {
-        augment_image(path.as_path(), Path::new(".")).expect("Failed to augment the image");
+        augment_image(path.as_path(), Path::new("."), 123).expect("Failed to augment the image");
     }
 }
