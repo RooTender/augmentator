@@ -56,62 +56,46 @@ where
 }
 
 fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn Error>> {
-    fn shift(img: &DynamicImage, rng: &mut ThreadRng) -> DynamicImage {
-        let shift_pixels_v = rng.gen_range(1..img.height());
-        let shift_pixels_h = rng.gen_range(1..img.width());
-
-        let shifted_img = shift_image(img, shift_pixels_v, ShiftAxis::Vertical);
-        let shifted_img = shift_image(&shifted_img, shift_pixels_h, ShiftAxis::Horizontal);
-
-        let hue_angle = rng.gen_range(1..360);
-        DynamicImage::from(colorops::huerotate(&shifted_img, hue_angle))
-    }
-
     let img = image::open(image_path)?;
     let mut rng = thread_rng();
 
-    let transformations: Vec<Box<dyn Fn(&DynamicImage) -> DynamicImage>> = vec![
-        Box::new(|img: &DynamicImage| img.clone()),
-        Box::new(|img: &DynamicImage| img.rotate90()),
-        Box::new(|img: &DynamicImage| img.rotate180()),
-        Box::new(|img: &DynamicImage| img.rotate270()),
-        Box::new(|img: &DynamicImage| img.flipv()),
-        Box::new(|img: &DynamicImage| img.fliph()),
+    let transformations = vec![
+        |img: &DynamicImage| img.clone(),
+        |img: &DynamicImage| img.rotate90(),
+        |img: &DynamicImage| img.rotate180(),
+        |img: &DynamicImage| img.rotate270(),
+        |img: &DynamicImage| img.flipv(),
+        |img: &DynamicImage| img.fliph(),
+    ];
+
+    let ops: Vec<Box<dyn Fn(&mut DynamicImage, &mut ThreadRng)>> = vec![
+        Box::new(|_: &mut DynamicImage, _: &mut ThreadRng| {}),
+        Box::new(|img: &mut DynamicImage, _: &mut ThreadRng| img.invert()),
+        Box::new(|img: &mut DynamicImage, rng: &mut ThreadRng| { 
+            img.brighten(rng.gen_range(-255..255));
+        }),
+        Box::new(|img: &mut DynamicImage, rng: &mut ThreadRng| { 
+            img.adjust_contrast(rng.gen_range(-1.0..1.0));
+        }),
     ];
 
     for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img, &mut rng);
-        let transformed_img = transform(&shifted_img);
+        for (j, op) in ops.iter().enumerate() {
+            let shift_pixels_v = rng.gen_range(1..img.height());
+            let shift_pixels_h = rng.gen_range(1..img.width());
+            let hue_angle = rng.gen_range(1..360);
 
-        let save_path = save_location.join(format!("augmented_{}.png", i));
-        transformed_img.save(&save_path)?;
-    }
+            let shifted_img = shift_image(&img, shift_pixels_v, ShiftAxis::Vertical);
+            let shifted_img = shift_image(&shifted_img, shift_pixels_h, ShiftAxis::Horizontal);
+            let hue_rotated_img = DynamicImage::from(colorops::huerotate(&shifted_img, hue_angle));
+            
+            let mut transformed_img = transform(&hue_rotated_img);
+            
+            op(&mut transformed_img, &mut rng);  // Applying the operation in place
 
-    for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img, &mut rng);
-        let mut transformed_img = transform(&shifted_img);
-        colorops::invert(&mut transformed_img);
-
-        let save_path = save_location.join(format!("inv_augmented_{}.png", i));
-        transformed_img.save(&save_path)?;
-    }
-
-    for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img, &mut rng);
-        let mut transformed_img = transform(&shifted_img);
-        colorops::brighten_in_place(&mut transformed_img, rng.gen_range(-100..100));
-
-        let save_path = save_location.join(format!("bri_augmented_{}.png", i));
-        transformed_img.save(&save_path)?;
-    }
-
-    for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img, &mut rng);
-        let mut transformed_img = transform(&shifted_img);
-        colorops::contrast_in_place(&mut transformed_img, rng.gen_range(-1.0..1.0));
-
-        let save_path = save_location.join(format!("cont_augmented_{}.png", i));
-        transformed_img.save(&save_path)?;
+            let save_path = save_location.join(format!("augmented_{}_{}.png", i, j));
+            transformed_img.save(&save_path)?;
+        }
     }
 
     Ok(())
