@@ -9,6 +9,21 @@ enum ShiftAxis {
     Vertical,
 }
 
+fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let mut full_paths: Vec<PathBuf> = vec![];
+
+    path.read_dir()?.filter_map(|e| e.ok()).for_each(|file| {
+        let filename = file.file_name().to_string_lossy().into_owned();
+        if let Some(extension) = filename.split('.').last() {
+            if extension == "jpg" || extension == "png" {
+                full_paths.push(file.path().canonicalize().unwrap());
+            }
+        }
+    });
+
+    Ok(full_paths)
+}
+
 fn shift_image<I, P, S>(img: &I, shift_pixels: u32, axis: ShiftAxis) -> ImageBuffer<P, Vec<S>>
 where
     I: GenericImageView<Pixel = P>,
@@ -38,21 +53,6 @@ where
     }
 
     temp_img
-}
-
-fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let mut full_paths: Vec<PathBuf> = vec![];
-
-    path.read_dir()?.filter_map(|e| e.ok()).for_each(|file| {
-        let filename = file.file_name().to_string_lossy().into_owned();
-        if let Some(extension) = filename.split('.').last() {
-            if extension == "jpg" || extension == "png" {
-                full_paths.push(file.path().canonicalize().unwrap());
-            }
-        }
-    });
-
-    Ok(full_paths)
 }
 
 fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn Error>> {
