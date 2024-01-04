@@ -3,8 +3,9 @@ use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, image
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
 use std::error::Error;
-use std::fs;
+use std::{fs, thread};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 enum ShiftAxis {
     Horizontal,
@@ -127,9 +128,23 @@ fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result
         fs::create_dir_all(output_path)?;
     }
 
+    let output_path = Arc::new(output_path.to_path_buf());
+    let mut handles = Vec::new();
+
     for image_path in samples {
-        augment_image(image_path.as_path(), output_path, seed)
-            .expect("An error occurred during image augmentation");
+        let destination_dir = Arc::clone(&output_path);
+        let seed = seed;
+
+        let handle = thread::spawn(move || {
+            augment_image(image_path.as_path(), destination_dir.as_path(), seed)
+                .expect("An error occurred during image augmentation");
+        });
+
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().expect("Thread failed");
     }
 
     Ok(())
