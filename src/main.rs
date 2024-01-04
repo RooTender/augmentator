@@ -12,18 +12,22 @@ fn shift_image(img: &DynamicImage, shift_pixels: u32, axis: ShiftAxis) -> Dynami
     let (width, height) = img.dimensions();
     let mut temp_img: RgbaImage = img.to_rgba8();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = img.get_pixel(x, y).to_rgba();
-            
-            match axis {
-                ShiftAxis::Horizontal => {
-                    let new_x = (x + shift_pixels) % width;
-                    temp_img.put_pixel(new_x, y, pixel);
-                },
-                ShiftAxis::Vertical => {
-                    let new_y = (y + shift_pixels) % height;
-                    temp_img.put_pixel(x, new_y, pixel);
+    match axis {
+        ShiftAxis::Horizontal => {
+            for y in 0..height {
+                let mut row: Vec<_> = (0..width).map(|x| img.get_pixel(x, y).to_rgba()).collect();
+                row.rotate_right(shift_pixels as usize);
+                for (x, pixel) in row.into_iter().enumerate() {
+                    temp_img.put_pixel(x as u32, y, pixel);
+                }
+            }
+        },
+        ShiftAxis::Vertical => {
+            for x in 0..width {
+                let mut col: Vec<_> = (0..height).map(|y| img.get_pixel(x, y).to_rgba()).collect();
+                col.rotate_right(shift_pixels as usize);
+                for (y, pixel) in col.into_iter().enumerate() {
+                    temp_img.put_pixel(x, y as u32, pixel);
                 }
             }
         }
@@ -65,7 +69,7 @@ fn main()
         let img = image::open(path)
           .expect("Failed to open image");
 
-        let shifted_img = shift_image(&img, img.width() / 4, ShiftAxis::Horizontal);
+        let shifted_img = shift_image(&img, img.width() / 4, ShiftAxis::Vertical);
         let save_path = format!("test_1.png");
 
         shifted_img
