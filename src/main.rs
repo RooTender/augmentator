@@ -3,34 +3,29 @@ use std::path::{Path, PathBuf};
 use std::error::Error;
 use image::{GenericImageView, DynamicImage, RgbaImage, Pixel};
 
-fn shift_image_horizontally(img: &DynamicImage, shift_pixels: u32) -> DynamicImage {
-    let (width, height) = img.dimensions();
-
-    let mut temp_img: RgbaImage = img.to_rgba8();
-
-    for y in 0..height {
-        for x in 0..width {
-            let new_x = (x + shift_pixels) % width;
-            let pixel = img.get_pixel(x, y).to_rgba();
-
-            temp_img.put_pixel(new_x, y, pixel);
-        }
-    }
-
-    DynamicImage::ImageRgba8(temp_img)
+enum ShiftAxis {
+    Horizontal,
+    Vertical,
 }
 
-fn shift_image_vertically(img: &DynamicImage, shift_pixels: u32) -> DynamicImage {
+fn shift_image(img: &DynamicImage, shift_pixels: u32, axis: ShiftAxis) -> DynamicImage {
     let (width, height) = img.dimensions();
-
     let mut temp_img: RgbaImage = img.to_rgba8();
 
     for y in 0..height {
         for x in 0..width {
-            let new_y = (y + shift_pixels) % height;
             let pixel = img.get_pixel(x, y).to_rgba();
-
-            temp_img.put_pixel(x, new_y, pixel);
+            
+            match axis {
+                ShiftAxis::Horizontal => {
+                    let new_x = (x + shift_pixels) % width;
+                    temp_img.put_pixel(new_x, y, pixel);
+                },
+                ShiftAxis::Vertical => {
+                    let new_y = (y + shift_pixels) % height;
+                    temp_img.put_pixel(x, new_y, pixel);
+                }
+            }
         }
     }
 
@@ -70,7 +65,7 @@ fn main()
         let img = image::open(path)
           .expect("Failed to open image");
 
-        let shifted_img = shift_image_horizontally(&img, img.width() / 4);
+        let shifted_img = shift_image(&img, img.width() / 4, ShiftAxis::Horizontal);
         let save_path = format!("test_1.png");
 
         shifted_img
