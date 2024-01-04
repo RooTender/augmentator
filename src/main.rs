@@ -80,7 +80,7 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
         let shift_pixels_v = rng.gen_range(1..img.height());
         let shift_pixels_h = rng.gen_range(1..img.width());
         let hue_angle = rng.gen_range(1..360);
-    
+
         let shifted_img = shift_image(img, shift_pixels_v, ShiftAxis::Vertical);
         let shifted_img = shift_image(&shifted_img, shift_pixels_h, ShiftAxis::Horizontal);
         DynamicImage::from(colorops::huerotate(&shifted_img, hue_angle))
@@ -89,7 +89,7 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
     for (i, transform) in transformations.iter().enumerate() {
         for (j, op) in ops.iter().enumerate() {
             let mut transformed_img = transform(&apply_shift_and_hue_rotate(&img, &mut rng));
-        
+
             op(&mut transformed_img, &mut rng);
 
             let save_path = save_location.join(format!("augmented_{}_{}.png", i, j));
@@ -101,6 +101,11 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
 }
 
 fn main() {
+    println!("Please enter the seed for deterministic random generation: ");
+    let mut buffer = String::new();
+    let _ = io::stdin().read_line(&mut buffer);
+    let seed: u64 = buffer.trim().parse().expect("Please type a number!");
+
     println!("Please enter the directory containing the images: ");
     let mut buffer = String::new();
     let _ = io::stdin().read_line(&mut buffer);
@@ -108,6 +113,6 @@ fn main() {
     let paths = get_image_paths(Path::new(buffer.trim())).expect("Failed to gather image paths");
 
     for path in paths {
-        augment_image(path.as_path(), Path::new("."), 123).expect("Failed to augment the image");
+        augment_image(path.as_path(), Path::new("."), seed).expect("Failed to augment the image");
     }
 }
