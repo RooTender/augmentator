@@ -3,6 +3,23 @@ use std::path::{Path, PathBuf};
 use std::error::Error;
 use image::{GenericImageView, DynamicImage, RgbaImage, Pixel};
 
+fn shift_image_horizontally(img: &DynamicImage, shift_pixels: u32) -> DynamicImage {
+    let (width, height) = img.dimensions();
+
+    let mut temp_img: RgbaImage = img.to_rgba8();
+
+    for y in 0..height {
+        for x in 0..width {
+            let new_x = (x + shift_pixels) % width;
+            let pixel = img.get_pixel(x, y).to_rgba();
+
+            temp_img.put_pixel(new_x, y, pixel);
+        }
+    }
+
+    DynamicImage::ImageRgba8(temp_img)
+}
+
 fn shift_image_vertically(img: &DynamicImage, shift_pixels: u32) -> DynamicImage {
     let (width, height) = img.dimensions();
 
@@ -53,7 +70,7 @@ fn main()
         let img = image::open(path)
           .expect("Failed to open image");
 
-        let shifted_img = shift_image_vertically(&img, img.height() / 2);
+        let shifted_img = shift_image_horizontally(&img, img.width() / 4);
         let save_path = format!("test_1.png");
 
         shifted_img
