@@ -2,6 +2,7 @@ use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, image
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
 use std::error::Error;
+use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -107,7 +108,11 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
 
             op(&mut transformed_img, &mut rng);
 
-            let save_path = save_location.join(format!("augmented_{}_{}.png", i, j));
+            let filename: std::borrow::Cow<'_, str> = image_path
+                .file_stem()
+                .expect("Failed to get filename without extension")
+                .to_string_lossy();
+            let save_path = save_location.join(format!("{}_{}_{}.png", filename, i, j));
             transformed_img.save(&save_path)
                 .expect("Cannot save the augmented image");
         }
@@ -118,6 +123,9 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
 
 fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
     let samples = get_image_paths(samples_path)?;
+    if !output_path.exists() {
+        fs::create_dir_all(output_path)?;
+    }
 
     for image_path in samples {
         augment_image(image_path.as_path(), output_path, seed)
