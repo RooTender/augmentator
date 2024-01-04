@@ -56,8 +56,7 @@ where
 }
 
 fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn Error>> {
-    fn shift(img: &DynamicImage) -> DynamicImage {
-        let mut rng = thread_rng();
+    fn shift(img: &DynamicImage, rng: &mut ThreadRng) -> DynamicImage {
         let shift_pixels_v = rng.gen_range(1..img.height());
         let shift_pixels_h = rng.gen_range(1..img.width());
 
@@ -69,6 +68,7 @@ fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn 
     }
 
     let img = image::open(image_path)?;
+    let mut rng = thread_rng();
 
     let transformations: Vec<Box<dyn Fn(&DynamicImage) -> DynamicImage>> = vec![
         Box::new(|img: &DynamicImage| img.clone()),
@@ -80,7 +80,7 @@ fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn 
     ];
 
     for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img);
+        let shifted_img = shift(&img, &mut rng);
         let transformed_img = transform(&shifted_img);
 
         let save_path = save_location.join(format!("augmented_{}.png", i));
@@ -88,11 +88,29 @@ fn augment_image(image_path: &Path, save_location: &Path) -> Result<(), Box<dyn 
     }
 
     for (i, transform) in transformations.iter().enumerate() {
-        let shifted_img = shift(&img);
+        let shifted_img = shift(&img, &mut rng);
         let mut transformed_img = transform(&shifted_img);
         colorops::invert(&mut transformed_img);
 
         let save_path = save_location.join(format!("inv_augmented_{}.png", i));
+        transformed_img.save(&save_path)?;
+    }
+
+    for (i, transform) in transformations.iter().enumerate() {
+        let shifted_img = shift(&img, &mut rng);
+        let mut transformed_img = transform(&shifted_img);
+        colorops::brighten_in_place(&mut transformed_img, rng.gen_range(-100..100));
+
+        let save_path = save_location.join(format!("bri_augmented_{}.png", i));
+        transformed_img.save(&save_path)?;
+    }
+
+    for (i, transform) in transformations.iter().enumerate() {
+        let shifted_img = shift(&img, &mut rng);
+        let mut transformed_img = transform(&shifted_img);
+        colorops::contrast_in_place(&mut transformed_img, rng.gen_range(-1.0..1.0));
+
+        let save_path = save_location.join(format!("cont_augmented_{}.png", i));
         transformed_img.save(&save_path)?;
     }
 
