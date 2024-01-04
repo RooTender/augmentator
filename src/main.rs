@@ -1,9 +1,9 @@
+use clap::{Command, Arg};
 use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, imageops::colorops};
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
 use std::error::Error;
 use std::fs;
-use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 enum ShiftAxis {
@@ -135,23 +135,43 @@ fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result
     Ok(())
 }
 
-fn read_input(prompt: &str) -> String {
-    print!("{}: ", prompt);
-    io::stdout().flush().unwrap();
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).expect("Failed to read input");
-
-    buffer.trim().to_string()
-}
-
 fn main() {
-    let seed: u64 = read_input("Seed for deterministic RNG")
-        .parse()
-        .expect("Please type a number!");
+    let matches = Command::new("Augmentator")
+        .version("1.0")
+        .author("RooTender")
+        .about("Augments dataset")
+        .arg(
+            Arg::new("input")
+                .short('i')
+                .long("input")
+                .value_name("INPUT_DIRECTORY")
+                .help("Sets the input directory for images")
+                .required(true),
+        )
+        .arg(
+            Arg::new("output")
+                .short('o')
+                .long("output")
+                .value_name("OUTPUT_DIRECTORY")
+                .help("Sets the output directory for augmented images")
+                .required(true),
+        )
+        .arg(
+            Arg::new("seed")
+                .short('s')
+                .long("seed")
+                .value_name("SEED_NUMBER")
+                .help("Sets the seed for deterministic RNG")
+                .required(true),
+        )
+        .get_matches();
 
-    let input = read_input("Directory with images");
-    let output: String = read_input("Directory to save results");
+    let input = matches.get_one::<String>("input").unwrap();
+    let output = matches.get_one::<String>("output").unwrap();
+    let seed = matches.get_one::<String>("seed").unwrap()
+        .parse::<u64>()
+        .expect("Seed must be a number!");
 
-    augment_dataset(Path::new(&input), Path::new(&output), seed)
+    augment_dataset(Path::new(input), Path::new(output), seed)
         .expect("Failed to augment dataset");
 }
