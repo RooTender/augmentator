@@ -1,46 +1,43 @@
-use std::io;
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
-use image::{self, GenericImageView};
-use std::collections::HashSet;
-use std::sync::Mutex;
+use std::io;
+use std::path::{Path, PathBuf};
+use image::GenericImageView;
 
-pub fn preprocess_data(input_dir: &Path, output_dir: &Path) -> io::Result<()> {
-    let seen_dimensions = Mutex::new(HashSet::new());
-    traverse_and_process(input_dir, output_dir, &seen_dimensions)
+pub type DimensionFilter = Box<dyn Fn(&(u32, u32), &Vec<PathBuf>) -> bool + Send + Sync>;
+
+pub fn preprocess_data(input_dir: &Path, output_dir: &Path, filters: Vec<DimensionFilter>) -> io::Result<()> {
+    let mut dimension_map: HashMap<(u32, u32), Vec<PathBuf>> = HashMap::new();
+    traverse_and_collect(input_dir, &mut dimension_map)?;
+
+    for (dimensions, files) in dimension_map {
+        if filters.iter().all(|f| f(&dimensions, &files)) {
+            let output_subdir = output_dir.join(format!("{}x{}", dimensions.0, dimensions.1));
+            fs::create_dir_all(&output_subdir)?;
+
+            for file in files {
+                let filename = file.file_name()
+                    .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to extract filename"))?;
+                fs::copy(&file, output_subdir.join(filename))?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
-fn traverse_and_process(input_dir: &Path, output_dir: &Path, seen_dimensions: &Mutex<HashSet<(u32, u32)>>) -> io::Result<()> {
+fn traverse_and_collect(input_dir: &Path, dimension_map: &mut HashMap<(u32, u32), Vec<PathBuf>>) -> io::Result<()> {
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
-            traverse_and_process(&path, output_dir, seen_dimensions)?;
+            traverse_and_collect(&path, dimension_map)?;
             continue;
         }
 
-        match image::open(&path) {
-            Ok(img) => {
-                let (mut width, mut height) = img.dimensions();
-                if height > width {
-                    std::mem::swap(&mut width, &mut height);
-                }
-                let dimensions = (width, height);
-
-                let mut dimensions_set = seen_dimensions.lock().unwrap();
-                let output_subdir = output_dir.join(format!("{}x{}", width, height));
-                if dimensions_set.insert(dimensions) {
-                    fs::create_dir_all(&output_subdir)?;
-                }
-                drop(dimensions_set);
-
-                img.save(output_subdir.join(entry.file_name()))
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            },
-            Err(e) => {
-                println!("Error opening file {:?}: {}", path, e);
-                continue;
-            },
+        if let Ok(img) = image::open(&path) {
+            let dimensions = img.dimensions();
+            dimension_map.entry(dimensions).or_insert_with(Vec::new).push(path);
         }
     }
 
