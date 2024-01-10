@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -24,6 +25,59 @@ pub fn preprocess_data(input_dir: &Path, output_dir: &Path, filters: Vec<Dimensi
     }
 
     Ok(())
+}
+
+pub fn delete_unpaired_files(dir1: &Path, dir2: &Path) -> io::Result<usize> {
+    fn collect_file_paths(dir: &Path, base: &Path) -> io::Result<HashSet<PathBuf>> {
+        let mut file_paths = HashSet::new();
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                file_paths.extend(collect_file_paths(&path, base)?);
+            } else {
+                if let Some(relative_path) = path.strip_prefix(base).ok() {
+                    file_paths.insert(relative_path.to_path_buf());
+                }
+            }
+        }
+        Ok(file_paths)
+    }
+
+    fn delete_empty_dirs(dir: &Path) -> io::Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                delete_empty_dirs(&path)?;
+                if fs::read_dir(&path)?.next().is_none() { // Check if the directory is empty
+                    fs::remove_dir(&path)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    let file_paths_dir1 = collect_file_paths(dir1, dir1)?;
+    let file_paths_dir2 = collect_file_paths(dir2, dir2)?;
+
+    let unique_dir1 = file_paths_dir1.difference(&file_paths_dir2).collect::<HashSet<_>>();
+    let unique_dir2 = file_paths_dir2.difference(&file_paths_dir1).collect::<HashSet<_>>();
+
+    let mut deleted_count = 0;
+    for relative_path in unique_dir1 {
+        fs::remove_file(dir1.join(relative_path))?;
+        deleted_count += 1;
+    }
+    for relative_path in unique_dir2 {
+        fs::remove_file(dir2.join(relative_path))?;
+        deleted_count += 1;
+    }
+
+    delete_empty_dirs(dir1)?;
+    delete_empty_dirs(dir2)?;
+
+    Ok(deleted_count)
 }
 
 fn traverse_and_collect(input_dir: &Path, dimension_map: &mut HashMap<(u32, u32), Vec<PathBuf>>) -> io::Result<()> {
