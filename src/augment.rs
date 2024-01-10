@@ -1,4 +1,3 @@
-use clap::{Command, Arg};
 use image::{GenericImageView, Primitive, DynamicImage, ImageBuffer, Pixel, imageops::colorops};
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
@@ -7,6 +6,25 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+pub fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
+    let samples = get_image_paths(samples_path)?;
+    if !output_path.exists() {
+        fs::create_dir_all(output_path)?;
+    }
+
+    let output_path = Arc::new(output_path.to_path_buf());
+
+    samples.par_iter().for_each(|image_path| {
+        let destination_dir = Arc::clone(&output_path);
+        let seed = seed;
+
+        augment_image(image_path.as_path(), destination_dir.as_path(), seed)
+            .expect("An error occurred during image augmentation");
+    });
+
+    Ok(())
+}
 
 enum ShiftAxis {
     Horizontal,
@@ -119,25 +137,6 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
                 .expect("Cannot save the augmented image");
         }
     }
-
-    Ok(())
-}
-
-fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
-    let samples = get_image_paths(samples_path)?;
-    if !output_path.exists() {
-        fs::create_dir_all(output_path)?;
-    }
-
-    let output_path = Arc::new(output_path.to_path_buf());
-
-    samples.par_iter().for_each(|image_path| {
-        let destination_dir = Arc::clone(&output_path);
-        let seed = seed;
-
-        augment_image(image_path.as_path(), destination_dir.as_path(), seed)
-            .expect("An error occurred during image augmentation");
-    });
 
     Ok(())
 }
