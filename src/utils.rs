@@ -4,8 +4,18 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use image::GenericImageView;
+use image::ImageError;
 
 pub type DimensionFilter = Box<dyn Fn(&(u32, u32), &Vec<PathBuf>) -> bool + Send + Sync>;
+
+pub enum ConversionFormat {
+    RGBA
+}
+
+enum ScaleDirection {
+    Up,
+    Down,
+}
 
 pub fn preprocess_data(input_dir: &Path, output_dir: &Path, filters: Vec<DimensionFilter>) -> io::Result<()> {
     let mut dimension_map: HashMap<(u32, u32), Vec<PathBuf>> = HashMap::new();
@@ -47,9 +57,20 @@ pub fn delete_unpaired_files(dir1: &Path, dir2: &Path, scale_factor: u32) -> io:
     Ok(())
 }
 
-enum ScaleDirection {
-    Up,
-    Down,
+pub fn convert_images(dir: &Path, format: ConversionFormat) -> Result<(), ImageError> {
+    let file_paths = collect_file_paths(dir, dir).map_err(|e| ImageError::IoError(e))?;
+
+    for path in file_paths {
+        let full_path = dir.join(&path);
+        let img = image::open(&full_path)?;
+
+        let converted = match format {
+            ConversionFormat::RGBA => img.to_rgba8()
+        };
+
+        converted.save(full_path)?;
+    }
+    Ok(())
 }
 
 fn scale_dir_dimensions(paths: HashSet<PathBuf>, scale_factor: u32, direction: ScaleDirection) -> HashSet<PathBuf> {
@@ -79,6 +100,7 @@ fn scale_dir_dimensions(paths: HashSet<PathBuf>, scale_factor: u32, direction: S
 
 fn collect_file_paths(dir: &Path, base: &Path) -> io::Result<HashSet<PathBuf>> {
     let mut file_paths = HashSet::new();
+    
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
