@@ -1,11 +1,11 @@
 <script lang="ts">
   import Jumbotron from './lib/Jumbotron.svelte';
-  import Augmentator from './lib/Augmentator.svelte';
+  import DirectorySettings from './lib/DirectorySettings.svelte';
   import Greet from './lib/Greet.svelte'
 </script>
 
 <main>
   <Jumbotron/>
   <hr>
-  <Augmentator/>
+  <DirectorySettings/>
 </main>
