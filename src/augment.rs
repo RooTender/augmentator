@@ -5,45 +5,55 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 pub fn augment_dataset(samples_path: &Path, output_path: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
-    let samples = get_image_paths(samples_path)?;
-    if !output_path.exists() {
-        fs::create_dir_all(output_path)?;
-    }
+    let samples = get_image_paths(samples_path, output_path)?;
+    
+    samples.par_iter().for_each(|(input_path, output_path)| {
+        // Copy original image to the output directory
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create directories");
+        }
+        fs::copy(input_path, output_path).expect("Failed to copy files");
 
-    let output_path = Arc::new(output_path.to_path_buf());
-
-    samples.par_iter().for_each(|image_path| {
-        let destination_dir = Arc::clone(&output_path);
+        // Perform augmentation
         let seed = seed;
-
-        augment_image(image_path.as_path(), destination_dir.as_path(), seed)
+        augment_image(output_path, seed)
             .expect("An error occurred during image augmentation");
     });
 
     Ok(())
 }
 
+fn get_image_paths(input_dir: &Path, output_dir: &Path) -> Result<Vec<(PathBuf, PathBuf)>, Box<dyn Error>> {
+    let mut paths = Vec::new();
+
+    fn traverse(input_path: &Path, output_path: &Path, paths: &mut Vec<(PathBuf, PathBuf)>) -> Result<(), Box<dyn Error>> {
+        for entry in fs::read_dir(input_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                let new_output = output_path.join(path.file_name().unwrap());
+                fs::create_dir_all(&new_output)?;
+                traverse(&path, &new_output, paths)?;
+            } else {
+                if image::open(&path).is_ok() {
+                    let relative_path = path.strip_prefix(input_path)?;
+                    let output_file_path = output_path.join(relative_path);
+                    paths.push((path, output_file_path));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    traverse(input_dir, output_dir, &mut paths)?;
+    Ok(paths)
+}
+
 enum ShiftAxis {
     Horizontal,
     Vertical,
-}
-
-fn get_image_paths(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let mut full_paths: Vec<PathBuf> = vec![];
-
-    path.read_dir()?.filter_map(|e| e.ok()).for_each(|file| {
-        let filename = file.file_name().to_string_lossy().into_owned();
-        if let Some(extension) = filename.split('.').last() {
-            if extension == "jpg" || extension == "png" {
-                full_paths.push(file.path().canonicalize().unwrap());
-            }
-        }
-    });
-
-    Ok(full_paths)
 }
 
 fn shift_image<I, P, S>(img: &I, shift_pixels: u32, axis: ShiftAxis) -> ImageBuffer<P, Vec<S>>
@@ -87,8 +97,8 @@ where
     temp_img
 }
 
-fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
-    let img = image::open(image_path)
+fn augment_image(save_location: &Path, seed: u64) -> Result<(), Box<dyn Error>> {
+    let img = image::open(save_location)
         .expect("Cannot open image from given location");
     let mut rng = StdRng::seed_from_u64(seed);
 
@@ -125,15 +135,15 @@ fn augment_image(image_path: &Path, save_location: &Path, seed: u64) -> Result<(
     for (i, transform) in transformations.iter().enumerate() {
         for (j, op) in ops.iter().enumerate() {
             let mut transformed_img = transform(&apply_shift_and_hue_rotate(&img, &mut rng));
-
             op(&mut transformed_img, &mut rng);
 
-            let filename: std::borrow::Cow<'_, str> = image_path
+            let filename: std::borrow::Cow<'_, str> = save_location
                 .file_stem()
                 .expect("Failed to get filename without extension")
                 .to_string_lossy();
-            let save_path = save_location.join(format!("{}_{}_{}.png", filename, i, j));
-            transformed_img.save(&save_path)
+            let augmented_path = save_location.with_file_name(format!("{}_{}_{}.png", filename, i, j));
+
+            transformed_img.save(&augmented_path)
                 .expect("Cannot save the augmented image");
         }
     }
