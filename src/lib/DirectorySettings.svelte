@@ -46,44 +46,42 @@
   }
 </script>
 
-<div class="container">
-    <h2>Directories</h2>
-    <div class="row">
-        <div class="col">
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="basic-addon1">📥</span>
-                </div>
-                <input
-                    bind:value={displayedDirs.input}
-                    on:click|preventDefault={() => selectDirectory(dirType.input)}
-                    type="text" class="form-control" placeholder="Input images" 
-                    aria-label="inputs_dir" aria-describedby="basic-addon1">
+<h2>Directories</h2>
+<div class="row">
+    <div class="col">
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text" id="basic-addon1">📥</span>
             </div>
+            <input
+                bind:value={displayedDirs.input}
+                on:click|preventDefault={() => selectDirectory(dirType.input)}
+                type="text" class="form-control" placeholder="Input images" 
+                aria-label="inputs_dir" aria-describedby="basic-addon1">
         </div>
-        <div class="col">
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="basic-addon1">🎯</span>
-                </div>
-                <input 
-                    bind:value={displayedDirs.target}
-                    on:click|preventDefault={() => selectDirectory(dirType.target)}
-                    type="text" class="form-control" placeholder="Targets images" 
-                    aria-label="targets_dir" aria-describedby="basic-addon1">
+    </div>
+    <div class="col">
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text" id="basic-addon1">🎯</span>
             </div>
+            <input 
+                bind:value={displayedDirs.target}
+                on:click|preventDefault={() => selectDirectory(dirType.target)}
+                type="text" class="form-control" placeholder="Targets images" 
+                aria-label="targets_dir" aria-describedby="basic-addon1">
         </div>
-        <div class="col">
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                  <span class="input-group-text" id="basic-addon1">📤</span>
-                </div>
-                <input 
-                    bind:value={displayedDirs.output}
-                    on:click|preventDefault={() => selectDirectory(dirType.output)}
-                    type="text" class="form-control" placeholder="Augmentation output" 
-                    aria-label="result_dir" aria-describedby="basic-addon1">
+    </div>
+    <div class="col">
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text" id="basic-addon1">📤</span>
             </div>
+            <input 
+                bind:value={displayedDirs.output}
+                on:click|preventDefault={() => selectDirectory(dirType.output)}
+                type="text" class="form-control" placeholder="Augmentation output" 
+                aria-label="result_dir" aria-describedby="basic-addon1">
         </div>
     </div>
 </div>
