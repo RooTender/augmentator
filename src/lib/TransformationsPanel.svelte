@@ -1,27 +1,13 @@
 <script lang="ts">
+    import { advancedOptionsStore } from '../store/TransformationsStore';
+    import { get } from 'svelte/store';
+
     type OptionType = 'everything' | 'paired' | 'custom';
-
     let selectedOption: OptionType = 'everything';
-    let advancedOptions = [
-        { id: 'hor_shift', name: 'Horizontal shift', checked: false },
-        { id: 'ver_shift', name: 'Vertical shift', checked: false },
-        { id: 'crop', name: 'Crop', checked: false },
-        { id: 'resize', name: 'Resize', checked: false },
-        { id: 'rotate', name: 'Rotate', checked: false },
-        { id: 'mirror', name: 'Mirror', checked: false },
-        { id: 'flip', name: 'Flip', checked: false },
-        { id: 'saturation', name: 'Saturation shift', checked: false },
-        { id: 'brightness', name: 'Brightness shift', checked: false },
-        { id: 'contrast', name: 'Contrast shift', checked: false },
-        { id: 'hue_rotation', name: 'Hue rotation', checked: false },
-        { id: 'greyscale', name: 'Greyscale', checked: false },
-        { id: 'invert', name: 'Invert colors', checked: false},
-        { id: 'color_norm', name: 'Color norm', checked: false },
-    ];
-
+    
     const optionBehaviors = {
-        'everything': () => advancedOptions.map(option => ({ ...option, checked: true })),
-        'paired': () => advancedOptions.map(option => ({
+        'everything': () => get(advancedOptionsStore).map(option => ({ ...option, checked: true })),
+        'paired': () => get(advancedOptionsStore).map(option => ({
             ...option,
             checked: [
                 'hor_shift', 'ver_shift', 'rotate', 'mirror', 'flip', 
@@ -29,7 +15,7 @@
                 'greyscale', 'invert'
             ].includes(option.id),
         })),
-        'custom': () => advancedOptions
+        'custom': () => get(advancedOptionsStore)
     };
 
     const radioOptions: { value: OptionType; label: string; }[] = [
@@ -39,13 +25,16 @@
     ];
 
     function handleRadioChange() {
-        if (optionBehaviors[selectedOption]) {
-            advancedOptions = optionBehaviors[selectedOption]();
-        }
+        advancedOptionsStore.set(optionBehaviors[selectedOption]());
     }
 
-    function handleCheckboxChange() {
-        selectedOption = 'custom';
+    function handleCheckboxChange(optionId: string, event: any) {
+        advancedOptionsStore.update(options => options.map(option => {
+            if (option.id === optionId) {
+                return { ...option, checked: event.target.checked };
+            }
+            return option;
+        }));
     }
 
     handleRadioChange();
@@ -67,10 +56,12 @@
     <div class="col">
         <h5>Advanced</h5>
         <div class="row">
-            {#each advancedOptions as option, index (option.id)}
+            {#each $advancedOptionsStore as option (option.id)}
                 <div class="col-sm-6 col-md-4 col-lg-3 col-xl-3">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id={option.id} bind:checked={option.checked} on:change={handleCheckboxChange}>
+                        <input class="form-check-input" type="checkbox" id={option.id} 
+                            bind:checked={option.checked}
+                            on:change={(event) => handleCheckboxChange(option.id, event)}>
                         <label class="form-check-label" for={option.id}>
                             {option.name}
                         </label>
