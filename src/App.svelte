@@ -9,6 +9,8 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { get } from 'svelte/store';
 
+    let errorMessage: any;
+
     async function createAugmentedDataset() {
         const selectedTransformations = get(transformations)
             .filter(option => option.checked)
@@ -16,13 +18,15 @@
         const selectedDirectories = get(directories);
         
         try {
-            const result = await invoke('your_tauri_command', {
+            const result = await invoke('augment_dataset', {
                 directories: selectedDirectories,
                 transformations: selectedTransformations
             });
             console.log(result);
+            errorMessage = "";
         } catch (error) {
             console.error('Failed to create augmented dataset:', error);
+            errorMessage = error;
         }
     }
 </script>
@@ -33,13 +37,17 @@
   <DirectorySettings/>
   <TransformationsPanel/>
   <h2>Submit</h2>
+  {#if errorMessage}
+    <div class="alert alert-danger" role="alert">{errorMessage}</div>
+  {/if}
   <div class="row text-center lead">
-      <p>This will enlarge dataset
-      <b>3 times</b> resulting with X images!</p>
+    <p>This will enlarge dataset
+    <b>3 times</b> resulting with X images!</p>
   </div>
+  
   <div class="row">
     <button type="button" class="btn btn-primary btn-lg w-100" on:click={createAugmentedDataset}>
-        Create augmented dataset
+      Create augmented dataset
     </button>
   </div>
 </main>
