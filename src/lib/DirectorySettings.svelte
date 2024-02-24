@@ -1,11 +1,6 @@
 <script lang="ts">
   import { dialog } from '@tauri-apps/api';
-
-  let dirs = {
-    input: '',
-    target: '',
-    output: '',
-  };
+  import { directories } from '../store/DirectoriesStore';
 
   let displayedDirs = {
     input: '',
@@ -13,13 +8,7 @@
     output: '',
   };
 
-  enum dirType {
-    input = 'input',
-    target = 'target',
-    output = 'output',
-  }
-
-  async function selectDirectory(type: keyof typeof dirs) {
+  async function selectDirectory(type: 'input' | 'target' | 'output') {
     try {
       const selected = await dialog.open({
         directory: true,
@@ -27,7 +16,10 @@
       });
       if (selected) {
         const fullPath = selected.toString();
-        dirs[type] = fullPath;
+        directories.update(currentDirs => {
+          currentDirs[type] = fullPath;
+          return currentDirs;
+        });
         displayedDirs[type] = formatDirectoryPath(fullPath);
       } 
     } catch (error) {
@@ -55,7 +47,7 @@
             </div>
             <input
                 bind:value={displayedDirs.input}
-                on:click|preventDefault={() => selectDirectory(dirType.input)}
+                on:click|preventDefault={() => selectDirectory('input')}
                 type="text" class="form-control" placeholder="Input images" 
                 aria-label="inputs_dir" aria-describedby="basic-addon1">
         </div>
@@ -67,7 +59,7 @@
             </div>
             <input 
                 bind:value={displayedDirs.target}
-                on:click|preventDefault={() => selectDirectory(dirType.target)}
+                on:click|preventDefault={() => selectDirectory('target')}
                 type="text" class="form-control" placeholder="Targets images" 
                 aria-label="targets_dir" aria-describedby="basic-addon1">
         </div>
@@ -79,7 +71,7 @@
             </div>
             <input 
                 bind:value={displayedDirs.output}
-                on:click|preventDefault={() => selectDirectory(dirType.output)}
+                on:click|preventDefault={() => selectDirectory('output')}
                 type="text" class="form-control" placeholder="Augmentation output" 
                 aria-label="result_dir" aria-describedby="basic-addon1">
         </div>

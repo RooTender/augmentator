@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { advancedOptionsStore } from '../store/TransformationsStore';
+    import { transformations } from '../store/TransformationsStore';
     import { get } from 'svelte/store';
 
     type OptionType = 'everything' | 'paired' | 'custom';
     let selectedOption: OptionType = 'everything';
     
     const optionBehaviors = {
-        'everything': () => get(advancedOptionsStore).map(option => ({ ...option, checked: true })),
-        'paired': () => get(advancedOptionsStore).map(option => ({
+        'everything': () => get(transformations).map(option => ({ ...option, checked: true })),
+        'paired': () => get(transformations).map(option => ({
             ...option,
             checked: [
                 'hor_shift', 'ver_shift', 'rotate', 'mirror', 'flip', 
@@ -15,7 +15,7 @@
                 'greyscale', 'invert'
             ].includes(option.id),
         })),
-        'custom': () => get(advancedOptionsStore)
+        'custom': () => get(transformations)
     };
 
     const radioOptions: { value: OptionType; label: string; }[] = [
@@ -25,11 +25,11 @@
     ];
 
     function handleRadioChange() {
-        advancedOptionsStore.set(optionBehaviors[selectedOption]());
+        transformations.set(optionBehaviors[selectedOption]());
     }
 
     function handleCheckboxChange(optionId: string, event: any) {
-        advancedOptionsStore.update(options => options.map(option => {
+        transformations.update(options => options.map(option => {
             if (option.id === optionId) {
                 return { ...option, checked: event.target.checked };
             }
@@ -56,7 +56,7 @@
     <div class="col">
         <h5>Advanced</h5>
         <div class="row">
-            {#each $advancedOptionsStore as option (option.id)}
+            {#each $transformations as option (option.id)}
                 <div class="col-sm-6 col-md-4 col-lg-3 col-xl-3">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id={option.id} 

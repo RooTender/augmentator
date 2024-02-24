@@ -1,10 +1,21 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct Directories {
+    input: String,
+    target: String,
+    output: String,
+}
+
 #[tauri::command]
-fn your_tauri_command(options: Vec<String>) -> Result<String, String> {
+fn your_tauri_command(directories: Directories, transformations: Vec<String>) -> Result<String, String> {
     // Handle the options as needed, e.g., process them, save them, etc.
-    println!("Received options: {:?}", options);
+    
+    println!("Received directories: {:?}", directories);
+    println!("Received transformations: {:?}", transformations);
 
     // Return a success message or result
     Ok("Dataset created successfully".into())

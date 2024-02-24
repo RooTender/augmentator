@@ -4,17 +4,22 @@
     import DirectorySettings from './lib/DirectorySettings.svelte';
     import TransformationsPanel from './lib/TransformationsPanel.svelte';
 
-    import { advancedOptionsStore } from './store/TransformationsStore';
+    import { transformations } from './store/TransformationsStore';
+    import { directories } from './store/DirectoriesStore';
     import { invoke } from '@tauri-apps/api/tauri';
     import { get } from 'svelte/store';
 
     async function createAugmentedDataset() {
-        const selectedOptions = get(advancedOptionsStore)
+        const selectedTransformations = get(transformations)
             .filter(option => option.checked)
             .map(option => option.id);
+        const selectedDirectories = get(directories);
         
         try {
-            const result = await invoke('your_tauri_command', { options: selectedOptions });
+            const result = await invoke('your_tauri_command', {
+                directories: selectedDirectories,
+                transformations: selectedTransformations
+            });
             console.log(result);
         } catch (error) {
             console.error('Failed to create augmented dataset:', error);

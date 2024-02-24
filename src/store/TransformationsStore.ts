@@ -1,7 +1,6 @@
-// src/store.ts
 import { writable } from 'svelte/store';
 
-export const advancedOptionsStore = writable([
+export const transformations = writable([
     { id: 'hor_shift', name: 'Horizontal shift', checked: false },
     { id: 'ver_shift', name: 'Vertical shift', checked: false },
     { id: 'crop', name: 'Crop', checked: false },
