@@ -4,6 +4,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 
 // Move 
+#[derive(Default)]
 pub struct ShiftV;
 impl ImageTransformation for ShiftV {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -12,6 +13,7 @@ impl ImageTransformation for ShiftV {
     }
 }
 
+#[derive(Default)]
 pub struct ShiftH;
 impl ImageTransformation for ShiftH {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -56,6 +58,7 @@ fn shift_image(img: &DynamicImage, shift_pixels: u32, axis: ShiftAxis) -> Dynami
 }
 
 // Rotate
+#[derive(Default)]
 pub struct Rotate90;
 impl ImageTransformation for Rotate90 {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -63,6 +66,7 @@ impl ImageTransformation for Rotate90 {
     }
 }
 
+#[derive(Default)]
 pub struct Rotate180;
 impl ImageTransformation for Rotate180 {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -70,6 +74,7 @@ impl ImageTransformation for Rotate180 {
     }
 }
 
+#[derive(Default)]
 pub struct Rotate270;
 impl ImageTransformation for Rotate270 {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -78,6 +83,7 @@ impl ImageTransformation for Rotate270 {
 }
 
 // Flip
+#[derive(Default)]
 pub struct FlipH;
 impl ImageTransformation for FlipH {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -85,6 +91,7 @@ impl ImageTransformation for FlipH {
     }
 }
 
+#[derive(Default)]
 pub struct FlipV;
 impl ImageTransformation for FlipV {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -93,6 +100,7 @@ impl ImageTransformation for FlipV {
 }
 
 // Colors
+#[derive(Default)]
 pub struct HueRotate;
 impl ImageTransformation for HueRotate {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -101,6 +109,7 @@ impl ImageTransformation for HueRotate {
     }
 }
 
+#[derive(Default)]
 pub struct Saturate;
 impl ImageTransformation for Saturate {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -130,6 +139,7 @@ fn adjust_saturation(img: &DynamicImage, saturation: f32) -> DynamicImage {
     DynamicImage::ImageRgba8(output_img)
 }
 
+#[derive(Default)]
 pub struct Brighten;
 impl ImageTransformation for Brighten {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -138,6 +148,7 @@ impl ImageTransformation for Brighten {
     }
 }
 
+#[derive(Default)]
 pub struct Contrast;
 impl ImageTransformation for Contrast {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -147,6 +158,7 @@ impl ImageTransformation for Contrast {
 }
 
 // Filters
+#[derive(Default)]
 pub struct Grayscale;
 impl ImageTransformation for Grayscale {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {
@@ -154,6 +166,7 @@ impl ImageTransformation for Grayscale {
     }
 }
 
+#[derive(Default)]
 pub struct Invert;
 impl ImageTransformation for Invert {
     fn apply(&self, img: &DynamicImage, _: &mut StdRng) -> ImageResult<DynamicImage> {

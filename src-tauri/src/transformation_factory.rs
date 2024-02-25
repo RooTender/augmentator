@@ -14,25 +14,26 @@ impl TransformationFactory {
             registry: HashMap::new(),
         };
         // Register all transformations
-        factory.register("hor_shift", Box::new(|| Box::new(ShiftH) as Box<dyn ImageTransformation>));
-        factory.register("ver_shift", Box::new(|| Box::new(ShiftV) as Box<dyn ImageTransformation>));
+        factory.register::<ShiftH>("hor_shift");
+        factory.register::<ShiftV>("ver_shift");
         // TODO: implement crop, resize
-        factory.register("rotate90", Box::new(|| Box::new(Rotate90) as Box<dyn ImageTransformation>));
-        factory.register("rotate180", Box::new(|| Box::new(Rotate180) as Box<dyn ImageTransformation>));
-        factory.register("rotate270", Box::new(|| Box::new(Rotate270) as Box<dyn ImageTransformation>));
-        factory.register("mirror", Box::new(|| Box::new(FlipH) as Box<dyn ImageTransformation>));
-        factory.register("flip", Box::new(|| Box::new(FlipV) as Box<dyn ImageTransformation>));
-        factory.register("hue_rotation", Box::new(|| Box::new(HueRotate) as Box<dyn ImageTransformation>));
-        factory.register("saturation", Box::new(|| Box::new(Saturate) as Box<dyn ImageTransformation>));
-        factory.register("brightness", Box::new(|| Box::new(Brighten) as Box<dyn ImageTransformation>));
-        factory.register("contrast", Box::new(|| Box::new(Contrast) as Box<dyn ImageTransformation>));
-        factory.register("grayscale", Box::new(|| Box::new(Grayscale) as Box<dyn ImageTransformation>));
-        factory.register("invert", Box::new(|| Box::new(Invert) as Box<dyn ImageTransformation>));
+        factory.register::<Rotate90>("rotate90");
+        factory.register::<Rotate180>("rotate180");
+        factory.register::<Rotate270>("rotate270");
+        factory.register::<FlipH>("mirror");
+        factory.register::<FlipV>("flip");
+        factory.register::<HueRotate>("hue_rotation");
+        factory.register::<Saturate>("saturation");
+        factory.register::<Brighten>("brightness");
+        factory.register::<Contrast>("contrast");
+        factory.register::<Grayscale>("grayscale");
+        factory.register::<Invert>("invert");
         // TODO: implement color_norm
         factory
     }
 
-    fn register(&mut self, name: &str, constructor: TransformationFactoryFn) {
+    fn register<T: 'static + ImageTransformation + Default>(&mut self, name: &str) {
+        let constructor = Box::new(|| Box::new(T::default()) as Box<dyn ImageTransformation>);
         self.registry.insert(name.to_string(), constructor);
     }
 
