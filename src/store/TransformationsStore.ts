@@ -12,7 +12,7 @@ export const transformations = writable([
     { id: 'saturation', name: 'Saturation shift', checked: false },
     { id: 'brightness', name: 'Brightness shift', checked: false },
     { id: 'contrast', name: 'Contrast shift', checked: false },
-    { id: 'greyscale', name: 'Greyscale', checked: false },
+    { id: 'grayscale', name: 'Grayscale', checked: false },
     { id: 'invert', name: 'Invert colors', checked: false},
     { id: 'color_norm', name: 'Color norm', checked: false },
 ]);
