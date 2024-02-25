@@ -12,6 +12,15 @@ struct Directories {
 
 #[tauri::command]
 fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Result<String, String> {
+    check_missing_directories(&directories)?;
+
+    println!("Received directories: {:?}", directories);
+    println!("Received transformations: {:?}", transformations);
+
+    Ok("Dataset augmentation process started successfully.".into())
+}
+
+fn check_missing_directories(directories: &Directories) -> Result<(), String> {
     let mut missing_directories = Vec::new();
 
     if directories.input.trim().is_empty() {
@@ -29,10 +38,7 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
         return Err(format!("Directories {} aren't set.", missing_directories_str));
     }
 
-    println!("Received directories: {:?}", directories);
-    println!("Received transformations: {:?}", transformations);
-
-    Ok("Dataset augmentation process started successfully.".into())
+    Ok(())
 }
 
 fn main() {
