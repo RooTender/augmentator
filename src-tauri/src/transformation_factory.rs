@@ -4,12 +4,12 @@ use crate::transformations::*;
 
 type TransformationFactoryFn = Box<dyn Fn() -> Box<dyn ImageTransformation>>;
 
-struct TransformationFactory {
+pub struct TransformationFactory {
     registry: HashMap<String, TransformationFactoryFn>,
 }
 
 impl TransformationFactory {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut factory = TransformationFactory {
             registry: HashMap::new(),
         };
@@ -32,12 +32,12 @@ impl TransformationFactory {
         factory
     }
 
+    pub fn create(&self, name: &str) -> Option<Box<dyn ImageTransformation>> {
+        self.registry.get(name).map(|constructor| constructor())
+    }
+
     fn register<T: 'static + ImageTransformation + Default>(&mut self, name: &str) {
         let constructor = Box::new(|| Box::new(T::default()) as Box<dyn ImageTransformation>);
         self.registry.insert(name.to_string(), constructor);
-    }
-
-    fn create(&self, name: &str) -> Option<Box<dyn ImageTransformation>> {
-        self.registry.get(name).map(|constructor| constructor())
     }
 }
