@@ -1,8 +1,8 @@
 <script lang="ts">
     import './styles.css'
     import Jumbotron from './lib/Jumbotron.svelte';
-    import DirectorySettings from './lib/DirectorySettings.svelte';
-    import TransformationsPanel from './lib/TransformationsPanel.svelte';
+    import Directories from './lib/Directories.svelte';
+    import Transformations from './lib/Transformations.svelte';
 
     import { transformations } from './store/TransformationsStore';
     import { directories } from './store/DirectoriesStore';
@@ -34,8 +34,8 @@
 <Jumbotron/>
 <hr>
 <main class="container">
-  <DirectorySettings/>
-  <TransformationsPanel/>
+  <Directories/>
+  <Transformations/>
   <h2>Submit</h2>
   {#if errorMessage}
     <div class="alert alert-danger" role="alert">{errorMessage}</div>
