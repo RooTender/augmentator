@@ -7,15 +7,14 @@ mod file_handler;
 
 use file_handler::DimensionFilter;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{error::Error, path::Path};
+use std::{error::Error, fs, path::Path};
 use serde::Deserialize;
 
-use crate::{file_handler::*, transformation_factory::*, transformations::*};
+use crate::{file_handler::*, transformation_factory::*};
 
 #[derive(Debug, Deserialize)]
 struct Directories {
     input: String,
-    target: String,
     output: String,
 }
 
@@ -24,8 +23,9 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
     check_missing_directories(&directories)?;
 
     let input_dir = Path::new(directories.input.trim());
-    let target_dir = Path::new(directories.target.trim());
     let output_dir = Path::new(directories.output.trim());
+    let preprocessed_dir = output_dir.join("pre-processed");
+    let augmented_dir = output_dir.join("augmented");
 
     let factory = TransformationFactory::new();
 
@@ -35,18 +35,11 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
         // Add more filters as needed
     ];
 
-    preprocess_data(input_dir, output_dir, &filters).map_err(|e| e.to_string())?;
-    preprocess_data(target_dir, output_dir, &filters).map_err(|e| e.to_string())?;
+    preprocess_data(input_dir, &preprocessed_dir, &filters).map_err(|e| e.to_string())?;
 
-    //delete_unpaired_files(dir_1, dir_2, 2)
-        //     .expect("Failed to remove unpaired images");
-
-    //let rng = &mut StdRng::seed_from_u64(69);
-    //augment_data(input_dir, output_dir, &factory, &transformations, rng)
-    //    .expect("Failed to augment data!");
-
-    println!("Received directories: {:?}", directories);
-    println!("Received transformations: {:?}", transformations);
+    let rng = &mut StdRng::seed_from_u64(69);
+    augment_data(&preprocessed_dir, &augmented_dir, &factory, &transformations, rng)
+        .expect("Failed to augment input data!");
 
     Ok("Dataset augmentation process started successfully.".into())
 }
@@ -59,24 +52,38 @@ fn augment_data(
     rng: &mut StdRng
 ) -> Result<(), Box<dyn Error>> {
     let paths = collect_file_paths(input_dir, input_dir)?;
+    fs::create_dir_all(&output_dir)?;
 
     for path in paths {
         let full_path = input_dir.join(&path);
         let img = image::open(&full_path)?;
-
+    
         for transformation_name in transformations {
             if let Some(transformation) = factory.create(transformation_name) {
-                let img = transformation.apply(&img, rng)?;
-                let new_path = output_dir.join(&path);
-
-                img.save(new_path)?;
+                let transformed_img = transformation.apply(&img, rng)?;
+    
+                if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
+                    let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+                    let new_file_name = format!("{}_{}.{}", file_name, transformation_name, extension);
+                    
+                    let new_path = if let Some(parent) = output_dir.join(&path).parent() {
+                        fs::create_dir_all(parent)?;
+                        parent.join(new_file_name)
+                    } else {
+                        output_dir.join(new_file_name)
+                    };
+    
+                    transformed_img.save(new_path)?;
+                } else {
+                    eprintln!("Warning: Could not extract filename for path {:?}", path);
+                }
             } else {
                 eprintln!("Warning: Transformation '{}' not found.", transformation_name);
             }
         }
     }
-
-    Ok(())
+    
+    Ok(())    
 }
 
 fn check_missing_directories(directories: &Directories) -> Result<(), String> {
@@ -84,9 +91,6 @@ fn check_missing_directories(directories: &Directories) -> Result<(), String> {
 
     if directories.input.trim().is_empty() {
         missing_directories.push("input");
-    }
-    if directories.target.trim().is_empty() {
-        missing_directories.push("target");
     }
     if directories.output.trim().is_empty() {
         missing_directories.push("output");

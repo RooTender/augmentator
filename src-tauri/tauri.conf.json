@@ -29,7 +29,7 @@
         "removeDir": true,
         "removeFile": true,
         "renameFile": true,
-        "scope": ["$HOME/*"]
+        "scope": ["$HOME", "$HOME/*"]
       }
     },
     "windows": [

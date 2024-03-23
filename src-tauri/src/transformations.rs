@@ -8,7 +8,7 @@ use rand::Rng;
 pub struct ShiftV;
 impl ImageTransformation for ShiftV {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
-        let shift_pixels = rng.gen_range(1..img.height());
+        let shift_pixels = if img.height() > 1 { rng.gen_range(1..img.height()) } else { 0 };
         Ok(shift_image(img, shift_pixels, ShiftAxis::Vertical))
     }
 }
@@ -17,7 +17,7 @@ impl ImageTransformation for ShiftV {
 pub struct ShiftH;
 impl ImageTransformation for ShiftH {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
-        let shift_pixels = rng.gen_range(1..img.width());
+        let shift_pixels = if img.width() > 1 { rng.gen_range(1..img.width()) } else { 0 };
         Ok(shift_image(img, shift_pixels, ShiftAxis::Horizontal))
     }
 }

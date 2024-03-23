@@ -4,11 +4,10 @@
 
   let displayedDirs = {
     input: '',
-    target: '',
     output: '',
   };
 
-  async function selectDirectory(type: 'input' | 'target' | 'output') {
+  async function selectDirectory(type: 'input' | 'output') {
     try {
       const selected = await dialog.open({
         directory: true,
@@ -41,7 +40,7 @@
 <h2>Directories</h2>
 <div class="row">
     <div class="col">
-        <div class="input-group mb-3">
+        <div class="input-group mb-5">
             <div class="input-group-prepend">
               <span class="input-group-text" id="basic-addon1">📥</span>
             </div>
@@ -53,19 +52,7 @@
         </div>
     </div>
     <div class="col">
-        <div class="input-group mb-3">
-            <div class="input-group-prepend">
-              <span class="input-group-text" id="basic-addon1">🎯</span>
-            </div>
-            <input 
-                bind:value={displayedDirs.target}
-                on:click|preventDefault={() => selectDirectory('target')}
-                type="text" class="form-control" placeholder="Targets images" 
-                aria-label="targets_dir" aria-describedby="basic-addon1">
-        </div>
-    </div>
-    <div class="col">
-        <div class="input-group mb-3">
+        <div class="input-group mb-5">
             <div class="input-group-prepend">
               <span class="input-group-text" id="basic-addon1">📤</span>
             </div>
