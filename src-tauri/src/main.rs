@@ -5,7 +5,7 @@ mod transformation_factory;
 mod transformations;
 mod file_handler;
 
-use file_handler::DimensionFilter;
+use image::DynamicImage;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{error::Error, fs, path::Path};
 use serde::Deserialize;
@@ -41,13 +41,7 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
 
     let factory = TransformationFactory::new();
 
-    let filters: Vec<DimensionFilter> = vec![
-        //Box::new(move |_, files| files.len() >= 5),
-        //Box::new(move |dim, _| dim.0 == dim.1)
-        // Add more filters as needed
-    ];
-
-    preprocess_data(input_dir, &preprocessed_dir, &filters).map_err(|e| e.to_string())?;
+    preprocess_data(input_dir, &preprocessed_dir).map_err(|e| e.to_string())?;
 
     let rng = &mut StdRng::seed_from_u64(69);
     augment_data(
@@ -64,27 +58,41 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
 }
 
 fn augment_data(
-    input_dir: &Path, 
+    preprocessed_dir: &Path, 
     output_dir: &Path, 
     factory: &TransformationFactory, 
     always_transformations: &[String], 
     one_time_transformations: &[String], 
-    rng: &mut StdRng
+    rng: &mut StdRng,
 ) -> Result<(), Box<dyn Error>> {
-    let paths = collect_file_paths(input_dir, input_dir)?;
     fs::create_dir_all(output_dir)?;
 
-    for path in paths.iter() {
-        let full_path = input_dir.join(&path);
-        let mut img = image::open(&full_path)?;
+    let paths = collect_file_paths(preprocessed_dir, preprocessed_dir)?;
+    for relative_path in paths {
+        let input_path = preprocessed_dir.join(&relative_path);
+        let output_base_path = output_dir.join(&relative_path).with_extension("");
 
-        for transformation_name in always_transformations {
-            img = apply_transformation(&img, factory, transformation_name, rng)?;
+        if let Some(parent_dir) = output_base_path.parent() {
+            fs::create_dir_all(parent_dir)?;
         }
 
-        for transformation_name in one_time_transformations {
-            let transformed_img = apply_transformation(&img, factory, transformation_name, rng)?;
-            save_transformed_image(&transformed_img, &path, output_dir, transformation_name)?;
+        let img = image::open(&input_path)?;
+        let mut img = img.clone();
+
+        for transformation_name in always_transformations {
+            img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+        }
+
+        if one_time_transformations.is_empty() {
+            img.save(output_base_path.with_extension("png"))?;
+        }
+        else {
+            for transformation_name in one_time_transformations {
+                if let Some(transformed_img) = apply_transformation(&img, transformation_name, rng, factory) {
+                    let transformed_output_path = format!("{}_{}.png", output_base_path.display(), transformation_name);
+                    transformed_img.save(Path::new(&transformed_output_path))?;
+                }
+            }
         }
     }
 
@@ -92,35 +100,23 @@ fn augment_data(
 }
 
 fn apply_transformation(
-    img: &image::DynamicImage,
-    factory: &TransformationFactory,
+    img: &DynamicImage,
     transformation_name: &str,
     rng: &mut StdRng,
-) -> Result<image::DynamicImage, Box<dyn Error>> {
+    factory: &TransformationFactory,
+) -> Option<DynamicImage> {
     match factory.create(transformation_name) {
-        Some(transformation) => transformation.apply(img, rng).map_err(Into::into),
+        Some(transformation) => match transformation.apply(img, rng) {
+            Ok(transformed_img) => Some(transformed_img),
+            Err(_) => {
+                println!("Error applying transformation '{}', skipping.", transformation_name);
+                None
+            },
+        },
         None => {
             println!("Warning: Transformation '{}' not implemented, skipping.", transformation_name);
-            Ok(img.clone()) // Return the original image unchanged
-        }
-    }
-}
-
-fn save_transformed_image(
-    img: &image::DynamicImage,
-    path: &Path,
-    output_dir: &Path,
-    transformation_name: &str,
-) -> Result<(), Box<dyn Error>> {
-    if let Some(file_stem) = path.file_stem().and_then(|name| name.to_str()) {
-        let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("png");
-        let new_file_name = format!("{}_{}.{}", file_stem, transformation_name, extension);
-        let new_path = output_dir.join(new_file_name);
-
-        img.save(new_path)?;
-        Ok(())
-    } else {
-        Err("Could not extract filename".into())
+            None
+        },
     }
 }
 
