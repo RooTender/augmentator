@@ -16,7 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
     - name: Build
       run: cargo build --verbose
+      working-directory: src-tauri
+
     - name: Run tests
       run: cargo test --verbose
+      working-directory: src-tauri
