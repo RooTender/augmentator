@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
 
 export const transformations = writable([
-    { id: 'hor_shift', name: 'Horizontal shift', checked: false },
-    { id: 'ver_shift', name: 'Vertical shift', checked: false },
+    { id: 'hor_shift', name: 'Horizontal shift*', checked: false },
+    { id: 'ver_shift', name: 'Vertical shift*', checked: false },
     { id: 'crop', name: 'Crop', checked: false },
     { id: 'resize', name: 'Resize', checked: false },
     { id: 'rotate90', name: 'Rotate 90°', checked: false },

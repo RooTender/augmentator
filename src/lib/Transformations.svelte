@@ -2,17 +2,24 @@
     import { transformations } from '../store/TransformationsStore';
     import { get } from 'svelte/store';
 
-    type OptionType = 'everything' | 'paired' | 'custom';
+    type OptionType = 'everything' | 'preserve_colors' | 'preserve_shape' | 'custom';
     let selectedOption: OptionType = 'everything';
     
     const optionBehaviors = {
         'everything': () => get(transformations).map(option => ({ ...option, checked: true })),
-        'paired': () => get(transformations).map(option => ({
+        'preserve_colors': () => get(transformations).map(option => ({
             ...option,
             checked: [
-                'hor_shift', 'ver_shift', 'rotate', 'mirror', 'flip', 
-                'saturation', 'brightness', 'contrast', 'hue_rotation',
-                'greyscale', 'invert'
+                'hor_shift', 'ver_shift',
+                'rotate90', 'rotate180', 'rotate270',
+                'mirror', 'flip'
+            ].includes(option.id),
+        })),
+        'preserve_shape': () => get(transformations).map(option => ({
+            ...option,
+            checked: [
+                'hue_rotation', 'saturation', 'brightness',
+                'contrast', 'grayscale', 'invert', 'color_norm'
             ].includes(option.id),
         })),
         'custom': () => get(transformations)
@@ -20,7 +27,8 @@
 
     const radioOptions: { value: OptionType; label: string; }[] = [
         { value: 'everything', label: 'Everything' },
-        { value: 'paired', label: 'Paired samples' },
+        { value: 'preserve_colors', label: 'Preserve colors' },
+        { value: 'preserve_shape', label: 'Preserve shape' },
         { value: 'custom', label: 'Custom' },
     ];
 
@@ -35,6 +43,7 @@
             }
             return option;
         }));
+        selectedOption = 'custom';
     }
 
     handleRadioChange();
@@ -69,5 +78,6 @@
                 </div>
             {/each}
         </div>
+        <p>*<i>Applied to every transformation.</i></p>
     </div>
 </div>
