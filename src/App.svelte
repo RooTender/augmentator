@@ -40,10 +40,6 @@
   {#if errorMessage}
     <div class="alert alert-danger" role="alert">{errorMessage}</div>
   {/if}
-  <div class="row text-center lead">
-    <p>This will enlarge dataset
-    <b>3 times</b> resulting with X images!</p>
-  </div>
   
   <div class="row">
     <button type="button" class="btn btn-primary btn-lg w-100" on:click={createAugmentedDataset}>
