@@ -3,8 +3,6 @@ import { writable } from 'svelte/store';
 export const transformations = writable([
     { id: 'hor_shift', name: 'Horizontal shift*', checked: false },
     { id: 'ver_shift', name: 'Vertical shift*', checked: false },
-    { id: 'crop', name: 'Crop', checked: false },
-    { id: 'resize', name: 'Resize', checked: false },
     { id: 'rotate90', name: 'Rotate 90°', checked: false },
     { id: 'rotate180', name: 'Rotate 180°', checked: false },
     { id: 'rotate270', name: 'Rotate 270°', checked: false },
@@ -16,5 +14,4 @@ export const transformations = writable([
     { id: 'contrast', name: 'Contrast shift', checked: false },
     { id: 'grayscale', name: 'Grayscale', checked: false },
     { id: 'invert', name: 'Invert colors', checked: false},
-    { id: 'color_norm', name: 'Color norm', checked: false },
 ]);

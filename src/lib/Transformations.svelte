@@ -19,7 +19,7 @@
             ...option,
             checked: [
                 'hue_rotation', 'saturation', 'brightness',
-                'contrast', 'grayscale', 'invert', 'color_norm'
+                'contrast', 'grayscale', 'invert'
             ].includes(option.id),
         })),
         'custom': () => get(transformations)

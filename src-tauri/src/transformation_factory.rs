@@ -13,10 +13,8 @@ impl TransformationFactory {
         let mut factory = TransformationFactory {
             registry: HashMap::new(),
         };
-        // Register all transformations
         factory.register::<ShiftH>("hor_shift");
         factory.register::<ShiftV>("ver_shift");
-        // TODO: implement crop, resize
         factory.register::<Rotate90>("rotate90");
         factory.register::<Rotate180>("rotate180");
         factory.register::<Rotate270>("rotate270");
@@ -28,7 +26,6 @@ impl TransformationFactory {
         factory.register::<Contrast>("contrast");
         factory.register::<Grayscale>("grayscale");
         factory.register::<Invert>("invert");
-        // TODO: implement color_norm
         factory
     }
 
