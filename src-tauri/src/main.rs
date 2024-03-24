@@ -43,7 +43,7 @@ fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Re
 
     preprocess_data(input_dir, &preprocessed_dir).map_err(|e| e.to_string())?;
 
-    let rng = &mut StdRng::seed_from_u64(69);
+    let rng = &mut StdRng::seed_from_u64(1337);
     augment_data(
         &preprocessed_dir,
         &augmented_dir,
@@ -72,22 +72,26 @@ fn augment_data(
         let input_path = preprocessed_dir.join(&relative_path);
         let output_base_path = output_dir.join(&relative_path).with_extension("");
 
-        if let Some(parent_dir) = output_base_path.parent() {
-            fs::create_dir_all(parent_dir)?;
-        }
-
         let img = image::open(&input_path)?;
         let mut img = img.clone();
 
-        for transformation_name in always_transformations {
-            img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+        if let Some(parent_dir) = output_base_path.parent() {
+            fs::create_dir_all(parent_dir)?;
         }
+        img.save(output_base_path.with_extension("png"))?;
 
         if one_time_transformations.is_empty() {
-            img.save(output_base_path.with_extension("png"))?;
+            for transformation_name in always_transformations {
+                img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+            }
+            let output_path = format!("{}_shifted.png", output_base_path.display());
+            img.save(Path::new(&output_path))?;
         }
         else {
             for transformation_name in one_time_transformations {
+                for transformation_name in always_transformations {
+                    img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+                }
                 if let Some(transformed_img) = apply_transformation(&img, transformation_name, rng, factory) {
                     let transformed_output_path = format!("{}_{}.png", output_base_path.display(), transformation_name);
                     transformed_img.save(Path::new(&transformed_output_path))?;
