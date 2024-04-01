@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: 'lts/*'
           cache: 'npm'
-          cache-dependency-path: app/src-tauri/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
       - name: Install frontend dependencies
         run: npm install
