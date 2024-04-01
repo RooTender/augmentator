@@ -24,8 +24,8 @@ jobs:
     
     - name: Build
       run: cargo build --verbose
-      working-directory: src-tauri
+      working-directory: app/src-tauri
     
     - name: Run tests
       run: cargo test --verbose
-      working-directory: src-tauri
+      working-directory: app/src-tauri
