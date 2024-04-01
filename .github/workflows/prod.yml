@@ -36,10 +36,10 @@ jobs:
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
-        working-directory: app/src-tauri
         with:
           node-version: 'lts/*'
           cache: 'npm'
+          cache-dependency-path: app/src-tauri/package-lock.json
 
       - name: Install frontend dependencies
         run: npm install
