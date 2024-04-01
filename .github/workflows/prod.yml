@@ -36,6 +36,7 @@ jobs:
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
+        working-directory: app/src-tauri
         with:
           node-version: 'lts/*'
           cache: 'npm'
