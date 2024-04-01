@@ -34,8 +34,10 @@ jobs:
         with:
           workspaces: './app/src-tauri -> target'
 
-      - name: Install frontend dependencies
+      - name: Bun setup
         uses: oven-sh/setup-bun@v1
+
+      - name: Install frontend dependencies
         run: bun install
         working-directory: app/src-tauri
 
