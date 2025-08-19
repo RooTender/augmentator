@@ -1,6 +1,7 @@
 <script lang="ts">
     import { transformations } from '../store/TransformationsStore';
     import { get } from 'svelte/store';
+    import { seed } from '../store/SeedStore';
 
     type OptionType = 'everything' | 'preserve_colors' | 'preserve_shape' | 'custom';
     let selectedOption: OptionType = 'everything';
@@ -47,9 +48,23 @@
     }
 
     handleRadioChange();
+
+    function handleSeedChange(e: Event) {
+        const value = (e.target as HTMLInputElement).value;
+        const digits = value.replace(/\D/g, '');
+        (e.target as HTMLInputElement).value = digits;
+        seed.set(digits ? parseInt(digits, 10) : 0);
+    }
 </script>
 
 <h2>Transformations</h2>
+<div class="row mb-3">
+  <div class="col-12">
+    <label for="seed" class="form-label h5">Seed</label>
+    <input id="seed" type="text" class="form-control text-center" on:input={handleSeedChange} bind:value={$seed}/>
+  </div>
+</div>
+
 <div class="row">
     <div class="col-4">
         <h5>Basic</h5>

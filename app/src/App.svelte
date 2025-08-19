@@ -6,6 +6,7 @@
 
     import { transformations } from './store/TransformationsStore';
     import { directories } from './store/DirectoriesStore';
+    import { seed } from './store/SeedStore';
     import { invoke } from '@tauri-apps/api/core';
     import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
     import { get } from 'svelte/store';
@@ -44,14 +45,17 @@
 
   async function createAugmentedDataset() {
     errorMessage = null;
+
     const selectedTransformations = get(transformations).filter(o => o.checked).map(o => o.id);
     const selectedDirectories = get(directories);
+    const baseSeed = Number(get(seed)) ?? 0;
 
     try {
       // komenda zwróci szybko; progres idzie eventami
       await invoke('augment_dataset', {
         directories: selectedDirectories,
-        transformations: selectedTransformations
+        transformations: selectedTransformations,
+        seed: baseSeed,
       });
     } catch (e) {
       errorMessage = String(e);

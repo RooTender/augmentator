@@ -39,6 +39,7 @@ async fn augment_dataset(
     window: WebviewWindow,
     directories: Directories,
     transformations: Vec<String>,
+    seed: u64,
 ) -> Result<String, String> {
     check_missing_directories(&directories)?;
 
@@ -57,14 +58,15 @@ async fn augment_dataset(
     let input_dir = PathBuf::from(directories.input.trim());
     let output_dir = PathBuf::from(directories.output.trim());
 
-    let image_paths = collect_image_paths(&input_dir).map_err(|e| e.to_string())?;
+    let mut image_paths = collect_image_paths(&input_dir).map_err(|e| e.to_string())?;
+    image_paths.sort();
     let total = image_paths.len();
 
     let label = window.label().to_string();
     let _ = app.emit_to(&label, "augment-started", total);
 
     tauri::async_runtime::spawn_blocking(move || {
-        let rng = &mut StdRng::seed_from_u64(1337);
+        let base_seed: u64 = seed;
         let factory = TransformationFactory::new();
 
         if let Err(e) = augment_data_with_progress(
@@ -74,7 +76,7 @@ async fn augment_dataset(
             &factory,
             &always_transformations,
             &one_time_transformations,
-            rng,
+            base_seed,
             &app,
             &label,
             total,
@@ -121,7 +123,7 @@ fn augment_data_with_progress(
     factory: &TransformationFactory,
     always_transformations: &[String],
     one_time_transformations: &[String],
-    rng: &mut StdRng,
+    base_seed: u64,
     app: &AppHandle,
     label: &str,
     total: usize,
@@ -136,7 +138,6 @@ fn augment_data_with_progress(
         let output_base_path = output_dir.join(relative_path).with_extension("");
 
         let img = image::open(&path)?;
-        let mut img = img.clone();
 
         if let Some(parent_dir) = output_base_path.parent() {
             fs::create_dir_all(parent_dir)?;
@@ -144,22 +145,27 @@ fn augment_data_with_progress(
         img.save(output_base_path.with_extension("png"))?;
 
         if one_time_transformations.is_empty() {
+            let mut result = img.clone();
+
             for transformation_name in always_transformations {
-                img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+                result = apply_transformation(&result, transformation_name, base_seed, factory).unwrap_or(result);
             }
             let output_path = format!("{}_shifted.png", output_base_path.display());
-            img.save(Path::new(&output_path))?;
+            result.save(Path::new(&output_path))?;
         } else {
-            for transformation_name in one_time_transformations {
+            for one_time_transformation in one_time_transformations {
+                let mut base = img.clone();
+
                 for transformation_name in always_transformations {
-                    img = apply_transformation(&img, transformation_name, rng, factory)
-                        .unwrap_or(img);
+                    base = apply_transformation(&base, transformation_name, base_seed, factory)
+                        .unwrap_or(base);
                 }
+
                 if let Some(transformed_img) =
-                    apply_transformation(&img, transformation_name, rng, factory)
+                    apply_transformation(&base, one_time_transformation, base_seed, factory)
                 {
                     let transformed_output_path =
-                        format!("{}_{}.png", output_base_path.display(), transformation_name);
+                        format!("{}_{}.png", output_base_path.display(), one_time_transformation);
                     transformed_img.save(Path::new(&transformed_output_path))?;
                 }
             }
@@ -179,11 +185,13 @@ fn augment_data_with_progress(
 fn apply_transformation(
     img: &DynamicImage,
     transformation_name: &str,
-    rng: &mut StdRng,
+    base_seed: u64,
     factory: &TransformationFactory,
 ) -> Option<DynamicImage> {
+    let mut rng = StdRng::seed_from_u64(base_seed);
+
     match factory.create(transformation_name) {
-        Some(transformation) => match transformation.apply(img, rng) {
+        Some(transformation) => match transformation.apply(img, &mut rng) {
             Ok(transformed_img) => Some(transformed_img),
             Err(_) => {
                 println!(
