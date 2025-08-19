@@ -42,7 +42,7 @@
   {/if}
   
   <div class="row">
-    <button type="button" class="btn btn-primary btn-lg w-100" on:click={createAugmentedDataset}>
+    <button type="button" class="btn btn-primary btn-lg w-100 mb-3" on:click={createAugmentedDataset}>
       Create augmented dataset
     </button>
   </div>
