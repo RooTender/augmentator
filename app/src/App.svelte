@@ -6,7 +6,7 @@
 
     import { transformations } from './store/TransformationsStore';
     import { directories } from './store/DirectoriesStore';
-    import { invoke } from '@tauri-apps/api/tauri';
+    import { invoke } from '@tauri-apps/api/core';
     import { get } from 'svelte/store';
 
     let errorMessage: any;

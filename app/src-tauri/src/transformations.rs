@@ -3,12 +3,16 @@ use palette::{FromColor, Hsl, Srgb};
 use rand::rngs::StdRng;
 use rand::Rng;
 
-// Move 
+// Move
 #[derive(Default)]
 pub struct ShiftV;
 impl ImageTransformation for ShiftV {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
-        let shift_pixels = if img.height() > 1 { rng.gen_range(1..img.height()) } else { 0 };
+        let shift_pixels = if img.height() > 1 {
+            rng.gen_range(1..img.height())
+        } else {
+            0
+        };
         Ok(shift_image(img, shift_pixels, ShiftAxis::Vertical))
     }
 }
@@ -17,7 +21,11 @@ impl ImageTransformation for ShiftV {
 pub struct ShiftH;
 impl ImageTransformation for ShiftH {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
-        let shift_pixels = if img.width() > 1 { rng.gen_range(1..img.width()) } else { 0 };
+        let shift_pixels = if img.width() > 1 {
+            rng.gen_range(1..img.width())
+        } else {
+            0
+        };
         Ok(shift_image(img, shift_pixels, ShiftAxis::Horizontal))
     }
 }
@@ -42,7 +50,7 @@ fn shift_image(img: &DynamicImage, shift_pixels: u32, axis: ShiftAxis) -> Dynami
                     temp_img.put_pixel(new_x, y, pixel);
                 }
             }
-        },
+        }
         ShiftAxis::Vertical => {
             for x in 0..width {
                 for y in 0..height {
@@ -53,7 +61,7 @@ fn shift_image(img: &DynamicImage, shift_pixels: u32, axis: ShiftAxis) -> Dynami
             }
         }
     }
-    
+
     DynamicImage::from(temp_img)
 }
 
@@ -113,7 +121,7 @@ impl ImageTransformation for HueRotate {
 pub struct Saturate;
 impl ImageTransformation for Saturate {
     fn apply(&self, img: &DynamicImage, rng: &mut StdRng) -> ImageResult<DynamicImage> {
-        let saturation =  rng.gen_range(0.0..1.0);
+        let saturation = rng.gen_range(0.0..1.0);
         Ok(adjust_saturation(img, saturation))
     }
 }
@@ -121,12 +129,13 @@ impl ImageTransformation for Saturate {
 fn adjust_saturation(img: &DynamicImage, saturation: f32) -> DynamicImage {
     let (width, height) = img.dimensions();
     let mut output_img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
-    
+
     for (x, y, pixel) in img.pixels() {
         let rgb = Srgb::new(
             pixel[0] as f32 / 255.0,
             pixel[1] as f32 / 255.0,
-            pixel[2] as f32 / 255.0);
+            pixel[2] as f32 / 255.0,
+        );
         let hsl = Hsl::from_color(rgb);
 
         let adjusted_hsl = Hsl::new(hsl.hue, hsl.saturation * saturation, hsl.lightness);

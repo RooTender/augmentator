@@ -6,8 +6,12 @@ mod transformations;
 
 use image::DynamicImage;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{error::Error, fs, io, path::{Path, PathBuf}};
 use serde::Deserialize;
+use std::{
+    error::Error,
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use crate::transformation_factory::*;
 
@@ -18,20 +22,23 @@ struct Directories {
 }
 
 #[tauri::command]
-fn augment_dataset(directories: Directories, transformations: Vec<String>) -> Result<String, String> {
+fn augment_dataset(
+    directories: Directories,
+    transformations: Vec<String>,
+) -> Result<String, String> {
     check_missing_directories(&directories)?;
 
-    let (always_transformations, one_time_transformations) = transformations.iter().fold(
-        (Vec::new(), Vec::new()),
-        |(mut always, mut one_time), t| {
-            if t == "hor_shift" || t == "ver_shift" {
-                always.push(t.clone());
-            } else {
-                one_time.push(t.clone());
-            }
-            (always, one_time)
-        },
-    );
+    let (always_transformations, one_time_transformations) =
+        transformations
+            .iter()
+            .fold((Vec::new(), Vec::new()), |(mut always, mut one_time), t| {
+                if t == "hor_shift" || t == "ver_shift" {
+                    always.push(t.clone());
+                } else {
+                    one_time.push(t.clone());
+                }
+                (always, one_time)
+            });
 
     let input_dir = Path::new(directories.input.trim());
     let output_dir = Path::new(directories.output.trim());
@@ -66,7 +73,7 @@ fn collect_image_paths(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
             match image::open(&path) {
                 Ok(_) => {
                     image_paths.push(path);
-                },
+                }
                 Err(_) => {} // Not an image, skip
             }
         } else if path.is_dir() {
@@ -78,18 +85,20 @@ fn collect_image_paths(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
 }
 
 fn augment_data(
-    image_paths: &Vec<PathBuf>, 
+    image_paths: &Vec<PathBuf>,
     input_dir: &Path,
-    output_dir: &Path, 
-    factory: &TransformationFactory, 
-    always_transformations: &[String], 
-    one_time_transformations: &[String], 
+    output_dir: &Path,
+    factory: &TransformationFactory,
+    always_transformations: &[String],
+    one_time_transformations: &[String],
     rng: &mut StdRng,
 ) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(output_dir)?;
 
     for path in image_paths {
-        let relative_path = path.strip_prefix(input_dir).expect("Error stripping prefix from path");
+        let relative_path = path
+            .strip_prefix(input_dir)
+            .expect("Error stripping prefix from path");
         let output_base_path = output_dir.join(relative_path).with_extension("");
 
         let img = image::open(&path)?;
@@ -106,14 +115,17 @@ fn augment_data(
             }
             let output_path = format!("{}_shifted.png", output_base_path.display());
             img.save(Path::new(&output_path))?;
-        }
-        else {
+        } else {
             for transformation_name in one_time_transformations {
                 for transformation_name in always_transformations {
-                    img = apply_transformation(&img, transformation_name, rng, factory).unwrap_or(img);
+                    img = apply_transformation(&img, transformation_name, rng, factory)
+                        .unwrap_or(img);
                 }
-                if let Some(transformed_img) = apply_transformation(&img, transformation_name, rng, factory) {
-                    let transformed_output_path = format!("{}_{}.png", output_base_path.display(), transformation_name);
+                if let Some(transformed_img) =
+                    apply_transformation(&img, transformation_name, rng, factory)
+                {
+                    let transformed_output_path =
+                        format!("{}_{}.png", output_base_path.display(), transformation_name);
                     transformed_img.save(Path::new(&transformed_output_path))?;
                 }
             }
@@ -133,14 +145,20 @@ fn apply_transformation(
         Some(transformation) => match transformation.apply(img, rng) {
             Ok(transformed_img) => Some(transformed_img),
             Err(_) => {
-                println!("Error applying transformation '{}', skipping.", transformation_name);
+                println!(
+                    "Error applying transformation '{}', skipping.",
+                    transformation_name
+                );
                 None
-            },
+            }
         },
         None => {
-            println!("Warning: Transformation '{}' not implemented, skipping.", transformation_name);
+            println!(
+                "Warning: Transformation '{}' not implemented, skipping.",
+                transformation_name
+            );
             None
-        },
+        }
     }
 }
 
@@ -156,7 +174,10 @@ fn check_missing_directories(directories: &Directories) -> Result<(), String> {
 
     if !missing_directories.is_empty() {
         let missing_directories_str = missing_directories.join(", ");
-        return Err(format!("Directories {} aren't set.", missing_directories_str));
+        return Err(format!(
+            "Directories {} aren't set.",
+            missing_directories_str
+        ));
     }
 
     Ok(())
@@ -164,6 +185,9 @@ fn check_missing_directories(directories: &Directories) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![augment_dataset])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

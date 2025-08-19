@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{ "path": "." },
+		{ "path": "app/src" },
+		{ "path": "app/src-tauri" }
+	],
+	"settings": {
+		"rust-analyzer.linkedProjects": [
+			"src-tauri/Cargo.toml"
+		]
+	}
+}
