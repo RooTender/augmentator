@@ -6,7 +6,7 @@
 	],
 	"settings": {
 		"rust-analyzer.linkedProjects": [
-			"src-tauri/Cargo.toml"
+			"app/src-tauri/Cargo.toml"
 		]
 	}
 }

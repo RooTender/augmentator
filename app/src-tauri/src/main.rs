@@ -5,7 +5,10 @@ mod transformation_factory;
 mod transformations;
 
 use image::DynamicImage;
+use tauri::{AppHandle, Emitter};
+use tauri::webview::WebviewWindow;
 use rand::{rngs::StdRng, SeedableRng};
+use serde::Serialize;
 use serde::Deserialize;
 use std::{
     error::Error,
@@ -15,6 +18,15 @@ use std::{
 
 use crate::transformation_factory::*;
 
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AugmentProgress {
+    processed: usize,
+    total: usize,
+    percent: u8,
+}
+
 #[derive(Debug, Deserialize)]
 struct Directories {
     input: String,
@@ -22,7 +34,9 @@ struct Directories {
 }
 
 #[tauri::command]
-fn augment_dataset(
+async fn augment_dataset(
+    app: AppHandle,
+    window: WebviewWindow,
     directories: Directories,
     transformations: Vec<String>,
 ) -> Result<String, String> {
@@ -40,24 +54,40 @@ fn augment_dataset(
                 (always, one_time)
             });
 
-    let input_dir = Path::new(directories.input.trim());
-    let output_dir = Path::new(directories.output.trim());
+    let input_dir = PathBuf::from(directories.input.trim());
+    let output_dir = PathBuf::from(directories.output.trim());
 
-    let factory = TransformationFactory::new();
+    let image_paths = collect_image_paths(&input_dir).map_err(|e| e.to_string())?;
+    let total = image_paths.len();
 
-    let image_paths = collect_image_paths(input_dir).map_err(|e| e.to_string())?;
+    let label = window.label().to_string();
+    let _ = app.emit_to(&label, "augment-started", total);
 
-    let rng = &mut StdRng::seed_from_u64(1337);
-    augment_data(
-        &image_paths,
-        &input_dir,
-        &output_dir,
-        &factory,
-        &always_transformations,
-        &one_time_transformations,
-        rng,
-    )
-    .expect("Failed to augment input data!");
+    tauri::async_runtime::spawn_blocking(move || {
+        let rng = &mut StdRng::seed_from_u64(1337);
+        let factory = TransformationFactory::new();
+
+        if let Err(e) = augment_data_with_progress(
+            &image_paths,
+            &input_dir,
+            &output_dir,
+            &factory,
+            &always_transformations,
+            &one_time_transformations,
+            rng,
+            &app,
+            &label,
+            total,
+        ) {
+            let _ = app.emit_to(&label, "augment-error", e.to_string());
+            return Err(e.to_string());
+        }
+
+        let _ = app.emit_to(&label, "augment-finished", ());
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     Ok("Dataset augmentation process started successfully.".into())
 }
@@ -84,7 +114,7 @@ fn collect_image_paths(input_dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(image_paths)
 }
 
-fn augment_data(
+fn augment_data_with_progress(
     image_paths: &Vec<PathBuf>,
     input_dir: &Path,
     output_dir: &Path,
@@ -92,13 +122,17 @@ fn augment_data(
     always_transformations: &[String],
     one_time_transformations: &[String],
     rng: &mut StdRng,
+    app: &AppHandle,
+    label: &str,
+    total: usize,
 ) -> Result<(), Box<dyn Error>> {
     fs::create_dir_all(output_dir)?;
 
-    for path in image_paths {
+    for (idx, path) in image_paths.iter().enumerate() {
         let relative_path = path
             .strip_prefix(input_dir)
             .expect("Error stripping prefix from path");
+
         let output_base_path = output_dir.join(relative_path).with_extension("");
 
         let img = image::open(&path)?;
@@ -130,6 +164,13 @@ fn augment_data(
                 }
             }
         }
+
+        let processed = idx + 1;
+        let percent = (((processed as f64 / total as f64) * 100.0).round() as u8).min(100);
+        let _ = app.emit_to(
+            label, "augment-progress",
+            AugmentProgress { processed, total, percent }
+        );
     }
 
     Ok(())
