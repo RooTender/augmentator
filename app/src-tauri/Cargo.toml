@@ -20,6 +20,9 @@ palette = "0.7.5"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
+rayon = "1.11.0"
+num_cpus = "1.17.0"
+blake3 = "1.8.2"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

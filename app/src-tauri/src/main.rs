@@ -4,6 +4,7 @@
 mod transformation_factory;
 mod transformations;
 
+use blake3::Hasher;
 use image::DynamicImage;
 use tauri::{AppHandle, Emitter};
 use tauri::webview::WebviewWindow;
@@ -142,27 +143,39 @@ fn augment_data_with_progress(
         if let Some(parent_dir) = output_base_path.parent() {
             fs::create_dir_all(parent_dir)?;
         }
+
+        let stem = path.file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_lowercase())
+            .unwrap_or_default();
+
         img.save(output_base_path.with_extension("png"))?;
 
         if one_time_transformations.is_empty() {
             let mut result = img.clone();
 
-            for transformation_name in always_transformations {
-                result = apply_transformation(&result, transformation_name, base_seed, factory).unwrap_or(result);
+            for shift_transformation_name in always_transformations {
+                let t_seed = derive_seed_for_transform(&stem, base_seed, shift_transformation_name);
+                result = apply_transformation(&result, shift_transformation_name, t_seed, factory)
+                            .unwrap_or(result);
             }
+
             let output_path = format!("{}_shifted.png", output_base_path.display());
             result.save(Path::new(&output_path))?;
+
         } else {
             for one_time_transformation in one_time_transformations {
                 let mut base = img.clone();
 
                 for transformation_name in always_transformations {
-                    base = apply_transformation(&base, transformation_name, base_seed, factory)
+                    let t_seed = derive_seed_for_transform(&stem, base_seed, transformation_name);
+                    base = apply_transformation(&base, transformation_name, t_seed, factory)
                         .unwrap_or(base);
                 }
 
+                let t_seed = derive_seed_for_transform(&stem, base_seed, one_time_transformation);
                 if let Some(transformed_img) =
-                    apply_transformation(&base, one_time_transformation, base_seed, factory)
+                    apply_transformation(&base, one_time_transformation, t_seed, factory)
                 {
                     let transformed_output_path =
                         format!("{}_{}.png", output_base_path.display(), one_time_transformation);
@@ -185,10 +198,10 @@ fn augment_data_with_progress(
 fn apply_transformation(
     img: &DynamicImage,
     transformation_name: &str,
-    base_seed: u64,
+    seed: u64,
     factory: &TransformationFactory,
 ) -> Option<DynamicImage> {
-    let mut rng = StdRng::seed_from_u64(base_seed);
+    let mut rng = StdRng::seed_from_u64(seed);
 
     match factory.create(transformation_name) {
         Some(transformation) => match transformation.apply(img, &mut rng) {
@@ -209,6 +222,19 @@ fn apply_transformation(
             None
         }
     }
+}
+
+fn derive_seed_for_transform(stem: &str, base_seed: u64, transform: &str) -> u64 {
+    let mut h = Hasher::new();
+    h.update(&base_seed.to_le_bytes());
+    h.update(stem.as_bytes());
+    h.update(transform.as_bytes());
+
+    let out = h.finalize();
+    let mut eight = [0u8; 8];
+
+    eight.copy_from_slice(&out.as_bytes()[..8]);
+    u64::from_le_bytes(eight)
 }
 
 fn check_missing_directories(directories: &Directories) -> Result<(), String> {
