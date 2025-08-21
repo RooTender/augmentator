@@ -27,7 +27,8 @@
           percent = 0;
         }),
         await win.listen<{ processed:number; total:number; percent:number }>('augment-progress', (e) => {
-          percent = e.payload.percent ?? Math.round((e.payload.processed / e.payload.total) * 100);
+          const { processed, total, percent: p } = e.payload;
+          percent = p ?? (total ? Math.round((processed / total) * 100) : 100);
         }),
         await win.listen('augment-finished', () => {
           percent = 100;
