@@ -15,6 +15,14 @@ use std::{
 };
 use tauri::webview::WebviewWindow;
 
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
+use std::time::Duration;
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    Arc,
+};
+
 use crate::transformation_factory::*;
 
 
@@ -63,13 +71,13 @@ async fn augment_dataset(
     tauri::async_runtime::spawn(async move {
         let res = tauri::async_runtime::spawn_blocking(move || {
             let (always, one_time) = split_transformations(&transformations);
-            let factory = TransformationFactory::new();
+            let factory = Arc::new(TransformationFactory::new());
 
             augment_all(
                 &image_paths,
                 &input_dir,
                 &output_dir,
-                &factory,
+                factory.clone(),
                 &always,
                 &one_time,
                 seed,
@@ -101,7 +109,7 @@ fn augment_all(
     image_paths: &[PathBuf],
     input_dir: &Path,
     output_dir: &Path,
-    factory: &TransformationFactory,
+    factory: Arc<TransformationFactory>,
     always_transformations: &[&str],
     one_time_transformations: &[&str],
     base_seed: u64,
@@ -111,34 +119,81 @@ fn augment_all(
 ) -> Result<(), AnyErr> {
     fs::create_dir_all(output_dir)?;
 
-    for (idx, path) in image_paths.iter().enumerate() {
-        if let Err(err) = process_single(
-            path,
-            input_dir,
-            output_dir,
-            factory,
-            always_transformations,
-            one_time_transformations,
-            base_seed,
-        ) {
-            eprintln!("Failed to process {}: {err}", path.display());
-        }
+    // współdzielone
+    let processed = Arc::new(AtomicUsize::new(0));
+    let app = Arc::new(app.clone());
+    let label = label.to_string();
 
-        let processed = idx + 1;
-        let percent = (((processed as f64 / total as f64) * 100.0).round() as u8).min(100);
-        let _ = app.emit_to(
-            label,
+    // Flaga do zamknięcia reportera
+    let running = Arc::new(AtomicBool::new(true));
+
+    // --- Reporter: JEDNA nitka emituje progres co ~100ms ---
+    let processed_for_reporter = processed.clone();
+    let app_for_reporter = app.clone();
+    let label_for_reporter = label.clone();
+    let running_for_reporter = running.clone();
+
+    let reporter = std::thread::spawn(move || {
+        let mut last = 0usize;
+        while running_for_reporter.load(Ordering::Relaxed) {
+            let done = processed_for_reporter.load(Ordering::Relaxed);
+            if done != last {
+                let percent = (((done as f64 / total as f64) * 100.0).round() as u8).min(100);
+                let _ = app_for_reporter.emit_to(
+                    &label_for_reporter,
+                    "augment-progress",
+                    AugmentProgress { processed: done, total, percent },
+                );
+                last = done;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        // finalny „dopędzacz” po zamknięciu
+        let done = processed_for_reporter.load(Ordering::Relaxed);
+        let percent = (((done as f64 / total as f64) * 100.0).round() as u8).min(100);
+        let _ = app_for_reporter.emit_to(
+            &label_for_reporter,
             "augment-progress",
-            AugmentProgress {
-                processed,
-                total,
-                percent,
-            },
+            AugmentProgress { processed: done, total, percent },
         );
-    }
+    });
+
+    // --- Równoległa praca ---
+    // zostaw 1 rdzeń dla UI/systemu
+    let num_threads = num_cpus::get().saturating_sub(1).max(1);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .map_err(|e| format!("Failed to build rayon pool: {e}"))?;
+    let chunk = 8;
+
+    pool.install(|| {
+        image_paths.par_chunks(chunk).for_each(|paths| {
+            for path in paths {
+                if let Err(err) = process_single(
+                    path,
+                    input_dir,
+                    output_dir,
+                    &factory,
+                    always_transformations,
+                    one_time_transformations,
+                    base_seed,
+                ) {
+                    eprintln!("Failed to process {}: {err}", path.display());
+                }
+            }
+            // tylko licznik, ZERO emitów stąd
+            processed.fetch_add(paths.len(), Ordering::Relaxed);
+        });
+    });
+
+    // zamknij reportera i poczekaj
+    running.store(false, Ordering::Relaxed);
+    let _ = reporter.join();
 
     Ok(())
 }
+
 
 fn process_single(
     path: &Path,
