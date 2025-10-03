@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::transformations::*;
 
-type TransformationFactoryFn = Box<dyn Fn() -> Box<dyn ImageTransformation>>;
+type TransformationFactoryFn = fn() -> Box<dyn ImageTransformation>;
 
 pub struct TransformationFactory {
     registry: HashMap<String, TransformationFactoryFn>,
@@ -34,7 +34,11 @@ impl TransformationFactory {
     }
 
     fn register<T: 'static + ImageTransformation + Default>(&mut self, name: &str) {
-        let constructor = Box::new(|| Box::new(T::default()) as Box<dyn ImageTransformation>);
+        fn ctor<T: 'static + ImageTransformation + Default>() -> Box<dyn ImageTransformation> {
+            Box::new(T::default())
+        }
+
+        let constructor: TransformationFactoryFn = ctor::<T>;
         self.registry.insert(name.to_string(), constructor);
     }
 }

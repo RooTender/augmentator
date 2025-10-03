@@ -6,29 +6,63 @@
 
     import { transformations } from './store/TransformationsStore';
     import { directories } from './store/DirectoriesStore';
-    import { invoke } from '@tauri-apps/api/tauri';
+    import { seed } from './store/SeedStore';
+    import { invoke } from '@tauri-apps/api/core';
+    import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
     import { get } from 'svelte/store';
+    import { onMount } from 'svelte';
+  
+  let errorMessage: string | null = null;
+  let isAugmenting = false;
+  let percent = 0;
 
-    let errorMessage: any;
+  onMount(() => {
+    const win = getCurrentWebviewWindow();
+    let unsubs: Array<() => void> = [];
 
-    async function createAugmentedDataset() {
-        const selectedTransformations = get(transformations)
-            .filter(option => option.checked)
-            .map(option => option.id);
-        const selectedDirectories = get(directories);
-        
-        try {
-            const result = await invoke('augment_dataset', {
-                directories: selectedDirectories,
-                transformations: selectedTransformations
-            });
-            console.log(result);
-            errorMessage = "";
-        } catch (error) {
-            console.error('Failed to create augmented dataset:', error);
-            errorMessage = error;
-        }
+    (async () => {
+      unsubs.push(
+        await win.listen<number>('augment-started', () => {
+          isAugmenting = true;
+          percent = 0;
+        }),
+        await win.listen<{ processed:number; total:number; percent:number }>('augment-progress', (e) => {
+          const { processed, total, percent: p } = e.payload;
+          percent = p ?? (total ? Math.round((processed / total) * 100) : 100);
+        }),
+        await win.listen('augment-finished', () => {
+          percent = 100;
+          isAugmenting = false;
+        }),
+        await win.listen<string>('augment-error', (e) => {
+          errorMessage = e.payload || 'Augmentation failed.';
+          isAugmenting = false;
+        }),
+      );
+    })();
+
+    return () => { unsubs.forEach(u => u()); };
+  });
+
+  async function createAugmentedDataset() {
+    errorMessage = null;
+
+    const selectedTransformations = get(transformations).filter(o => o.checked).map(o => o.id);
+    const selectedDirectories = get(directories);
+    const baseSeed = Number(get(seed)) ?? 0;
+
+    try {
+      // komenda zwróci szybko; progres idzie eventami
+      await invoke('augment_dataset', {
+        directories: selectedDirectories,
+        transformations: selectedTransformations,
+        seed: baseSeed,
+      });
+    } catch (e) {
+      errorMessage = String(e);
+      isAugmenting = false;
     }
+  }
 </script>
 
 <Jumbotron/>
@@ -42,8 +76,17 @@
   {/if}
   
   <div class="row">
-    <button type="button" class="btn btn-primary btn-lg w-100" on:click={createAugmentedDataset}>
-      Create augmented dataset
+    <button 
+      type="button" 
+      class="btn btn-primary btn-lg w-100 mb-3" 
+      on:click={createAugmentedDataset}
+      disabled={isAugmenting}
+    >
+      {#if isAugmenting}
+        Augmenting ({percent}%)
+      {:else}
+        Create augmented dataset
+      {/if}
     </button>
   </div>
 </main>

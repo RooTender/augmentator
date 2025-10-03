@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { dialog } from '@tauri-apps/api';
+  import {  } from '@tauri-apps/api';
   import { directories } from '../store/DirectoriesStore';
+import * as dialog from "@tauri-apps/plugin-dialog"
 
   let displayedDirs = {
     input: '',
