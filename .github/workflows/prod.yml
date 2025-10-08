@@ -14,20 +14,19 @@ jobs:
       matrix:
         include:
           - name: linux
-            container: debian:bookworm
+            platform: ubuntu-22.04
           - name: macos
             platform: macos-latest
           - name: windows
             platform: windows-latest
 
-    runs-on: ${{ matrix.platform || 'ubuntu-latest' }}
-    container: ${{ matrix.container }}
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Prepare dependencies (Linux)
-        if: matrix.container != ''
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           apt-get update
           apt-get install -y \
