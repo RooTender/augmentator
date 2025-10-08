@@ -13,10 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: stable-linux
+          - name: linux
             container: debian:bookworm
-          - name: latest-linux
-            container: ubuntu:latest
           - name: macos
             platform: macos-latest
           - name: windows
